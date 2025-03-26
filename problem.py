@@ -69,10 +69,11 @@ class ProblemTO(ioh.problem.RealSingleObjective):
             self.x = x
 
     def evaluate(self, x):
+        self.update(x)
+        # JELLE DEBUG
         self.count += 1
         if self.count > self.budget : exit()
 
-        self.update(x)
         # we pass the new topology corresponding to`x` to the simulation
         self.model.update(self.topology)
         self.score = self.model.compute_element_compliance().sum()
