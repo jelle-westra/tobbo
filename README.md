@@ -36,6 +36,7 @@ For now I have three different parameterizations to test the system:
 - Add live plotting again
 - Make into python package
 - Profile the code
+- Add environment version and packages
 - Add the C version of fill_matrix to go faster
 - Implement the geo from mask to see how discrete will do
 - Adding the notebooks with example calculations
