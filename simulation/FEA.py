@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from typing import Tuple
 
 import simulation.FEM as FEM
-# from problem import Topology
 
+# TODO : fix this cyclic importing issue
+# from problem import Topology
 from shapely.geometry import MultiPolygon, Polygon
 @dataclass
 class Topology:
@@ -131,4 +132,5 @@ class BinaryElasticMembraneModel():
 
         return (U.transpose(0,2,1) @ Ke @ U).reshape(-1,1)
     
-    def compute_tip_displacement(self) -> float : ...
+    def compute_tip_displacement(self) -> float : 
+        raise NotImplemented('TODO')
