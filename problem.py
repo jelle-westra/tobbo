@@ -18,6 +18,7 @@ class ProblemTO(ioh.problem.RealSingleObjective):
     parameterization: Parameterization
     model: FEA.BinaryElasticMembraneModel
     # objective: Objective
+    budget: int
 
     def __post_init__(self) -> None :
         self.x = float('nan')*np.ones(self.parameterization.dimension)
@@ -28,7 +29,6 @@ class ProblemTO(ioh.problem.RealSingleObjective):
 
         # JELLE DEBUG
         self.count: int = 0
-        self.budget: int = 50
         self.response_vol: float = 0
         self.response_yaxis: float = 0
         self.response_pt: float = 0

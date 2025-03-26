@@ -17,6 +17,7 @@ import argparse
 
 def main() -> None :
     args = parse_args()
+    if not(os.path.exists('./results')) : os.mkdir('./results')
 
     topology = Topology(continuous=True, domain=box(0,0,100,50))
     
@@ -27,7 +28,7 @@ def main() -> None :
     # add topology.domain and topology.element_size or density something.
     model = BinaryElasticMembraneModel((100, 50), (1, 1), 1, 25, 1, 0.5, 0.25, 1e-9)
 
-    ioh_prob = ProblemTO(topology, parameterization, model)
+    ioh_prob = ProblemTO(topology, parameterization, model, args.budget)
 
     triggers = [
         ioh.logger.trigger.Each(1),
@@ -68,7 +69,7 @@ def parse_args() -> argparse.Namespace :
     parser = argparse.ArgumentParser()
     parser.add_argument('--run', required=True, type=int)
     parser.add_argument('--sigma0', type=float, default=0.25)
-    parser.add_argument('--budget', type=int, default=50)
+    parser.add_argument('--budget', type=int, default=500)
     parser.add_argument('--discrete', action='store_true', default=False)
     return parser.parse_args()
 
