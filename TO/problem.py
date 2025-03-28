@@ -73,7 +73,7 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         self.update(x)
         # JELLE DEBUG
         self.count += 1
-        if self.count > self.budget : exit()
+        if self.count > self.budget : raise KeyboardInterrupt()
 
         # we pass the new topology corresponding to`x` to the simulation
         self.model.update(self.topology)
@@ -100,7 +100,7 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         self.update(x)
 
         # JELLE DEBUG :
-        if (self.count < 10) and (time() - self.start_time) > 60 : exit()
+        if (self.count < 10) and (time() - self.start_time) > 60 : raise KeyboardInterrupt()
 
         from shapely.geometry import Point, LineString
         from scipy.sparse.csgraph import minimum_spanning_tree
