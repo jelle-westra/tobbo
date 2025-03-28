@@ -1,22 +1,23 @@
 import numpy as np
+from shapely import Point
 
 from dataclasses import dataclass
 from time import time
 import os
 
-import simulation.FEA as FEA
-from parameterization import Parameterization, Topology
 import ioh
 from ioh.iohcpp import RealConstraint
 
-from shapely import Point
+from .models import BinaryElasticMembraneModel
+from .parameterization import Parameterization
+from .topology import Topology
 
 
 @dataclass
-class ProblemTO(ioh.problem.RealSingleObjective):
+class ProblemInstance(ioh.problem.RealSingleObjective):
     topology: Topology
     parameterization: Parameterization
-    model: FEA.BinaryElasticMembraneModel
+    model: BinaryElasticMembraneModel
     # objective: Objective
     budget: int
 

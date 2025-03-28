@@ -1,24 +1,16 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 
 from dataclasses import dataclass
 from typing import Tuple
 
-import simulation.FEM as FEM
-
-# TODO : fix this cyclic importing issue
-# from problem import Topology
-from shapely.geometry import MultiPolygon, Polygon
-@dataclass
-class Topology:
-    continuous: bool
-    domain: Polygon
-    geometry: MultiPolygon = None
-    mask: np.ndarray = None
-
+from TO import FEM
+from TO.topology import Topology
 
 class RigidEdge(FEM.LinearSystemBoundaryCondition) :
     @staticmethod
-    def apply(state: FEM.LinearSystem) -> None : 
+    def apply(state: FEM.LinearSystem) -> None :
         # selecting the first column of the grid
         nodes = state.mesh.nodes[:,0]
         # setting all node components to 0
@@ -134,3 +126,16 @@ class BinaryElasticMembraneModel():
     
     def compute_tip_displacement(self) -> float : 
         raise NotImplemented('TODO')
+    
+    def plot(self, field: np.ndarray=None, fac: float=1, cmap: str='viridis', ax: Axes=None) -> Axes :
+        if (field is None) : field = np.ones(self.mesh.elements.shape)
+        assert (field.shape == self.mesh.elements.shape), ''
+        if (ax is None) : ax = plt.gca()
+
+        X_displaced = self.mesh.X + fac*self.state.u[::2].reshape(self.mesh.nodes.shape)
+        Y_displaced = self.mesh.Y + fac*self.state.u[1::2].reshape(self.mesh.nodes.shape)
+
+        rgba = plt.colormaps[cmap](field/field.max())
+        rgba[...,-1] = self.topology.mask
+
+        return ax.pcolormesh(X_displaced, Y_displaced, rgba, shading='flat')

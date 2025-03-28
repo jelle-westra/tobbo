@@ -3,7 +3,7 @@ from shapely.geometry import MultiPolygon, Polygon, box
 
 from dataclasses import dataclass, replace
 
-from problem import Parameterization
+from TO import Parameterization
 
 @dataclass 
 class CapsuleConfig:
@@ -30,6 +30,10 @@ def compute_curve(cap: CapsuleConfig, t: np.ndarray) -> np.ndarray :
     xy[t.size//2:] -= (d/2, 0)
 
     return (R2D(phi) @ xy.T).T + (p1 + p2)/2
+
+
+def compute_polygon(cap: CapsuleConfig, n_samples: int=1000) -> Polygon : 
+    return Polygon(compute_curve(cap, np.linspace(0, 1, n_samples)))
 
         
 class Capsules(Parameterization):

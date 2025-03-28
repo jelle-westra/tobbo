@@ -123,6 +123,8 @@ class StructuredQuadMesh(QuadMesh):
             self.nodes, (2,2)
         ).reshape(self.elements.size, 4)[:,[0,1,3,2]] # node order is anti-clockwise, hence column indexing
 
+        (self.X, self.Y) = np.meshgrid(np.linspace(0, domain_size[0], 1+self.nelx), np.linspace(0, domain_size[1], 1+self.nely))
+
     # forward the integration call to the single element
     def integrate(self, C_material: np.ndarray) -> np.ndarray : 
         return self.quads[0].integrate(C_material)

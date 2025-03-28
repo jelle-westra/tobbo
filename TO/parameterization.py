@@ -5,13 +5,7 @@ from rasterio.features import rasterize
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
-@dataclass
-class Topology:
-    continuous: bool
-    domain: Polygon
-    geometry: MultiPolygon = None
-    mask: np.ndarray = None
-
+from .topology import Topology
 
 class Parameterization(ABC) :
     domain: Polygon # bounding box

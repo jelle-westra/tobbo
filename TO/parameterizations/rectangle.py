@@ -3,7 +3,7 @@ from shapely.geometry import MultiPolygon, Polygon, box
 
 from dataclasses import dataclass, replace
 
-from problem import Parameterization
+from TO import Parameterization
 
 @dataclass 
 class RectangleConfig:

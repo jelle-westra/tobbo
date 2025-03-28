@@ -1,8 +1,6 @@
-from problem import ProblemTO, Topology
-from parameterizations.lame_curve import LameCurves
-from parameterizations.rectangle import Rectangles
-from parameterizations.capsule import Capsules
-from simulation.FEA import BinaryElasticMembraneModel
+from TO import Topology, ProblemInstance
+from TO.parameterizations import Capsules
+from TO.models import BinaryElasticMembraneModel
 
 from shapely.geometry import box
 
@@ -28,7 +26,7 @@ def main() -> None :
     # add topology.domain and topology.element_size or density something.
     model = BinaryElasticMembraneModel((100, 50), (1, 1), 1, 25, 1, 0.5, 0.25, 1e-9)
 
-    ioh_prob = ProblemTO(topology, parameterization, model, args.budget)
+    ioh_prob = ProblemInstance(topology, parameterization, model, args.budget)
 
     triggers = [
         ioh.logger.trigger.Each(1),

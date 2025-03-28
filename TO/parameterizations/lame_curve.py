@@ -4,7 +4,7 @@ from shapely.geometry import MultiPolygon, Polygon, box
 from dataclasses import dataclass, replace
 from typing import Tuple, List
 
-from problem import Parameterization
+from TO import Parameterization
 
 
 @dataclass
