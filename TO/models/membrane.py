@@ -32,8 +32,7 @@ class TipLoad(FEM.LinearSystemBoundaryCondition) :
 
 class BinaryElasticMembraneModel():
     def __init__(self, 
-        domain_size: Tuple[float, float], 
-        element_size: Tuple[float, float],
+        topology: Topology,
         thickness: float,
         E11: float,
         E22: float,
@@ -41,19 +40,16 @@ class BinaryElasticMembraneModel():
         nu12: float,
         Emin: float
     ) -> None :
-        (x_domain, y_domain) = domain_size
-        self.thickness = thickness
-
-        self.mesh: FEM.StructuredQuadMesh = FEM.StructuredQuadMesh(domain_size, element_size)
+        self.mesh: FEM.StructuredQuadMesh = FEM.StructuredQuadMesh(topology.domain_size, topology.density)
         self.state: FEM.LinearSystem = FEM.LinearSystem(self.mesh)
 
         self.C_material = self.calculate_C(E11, E22, G12, nu12)
         self.C_void = Emin * (self.C_material != 0)
 
-        self.Ke_material = self.thickness * self.mesh.integrate(self.C_material)
-        self.Ke_void = self.thickness * self.mesh.integrate(self.C_void)
+        self.Ke_material = thickness * self.mesh.integrate(self.C_material)
+        self.Ke_void = thickness * self.mesh.integrate(self.C_void)
 
-        self.topology = Topology(True, None, np.zeros(self.mesh.elements.shape, dtype=bool))
+        self.topology = topology
 
     @staticmethod
     def calculate_C(E11: float, E22: float, G12: float, nu12: float) -> np.ndarray:
