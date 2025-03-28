@@ -105,15 +105,15 @@ class QuadMesh(ABC):
 Mesh = QuadMesh # for now no triangle mesh, also only structured mesh for now
 
 class StructuredQuadMesh(QuadMesh):
-    def __init__(self, domain_size: Tuple[float, float], element_size: Tuple[float, float]) :
-        (dom_x, dom_y) = domain_size
-        (dx, dy) = element_size
-        assert (dom_x > dx) and (dom_y > dy), ''
+    def __init__(self, domain_size: Tuple[float, float], density: float) :
+        (domain_size_x, domain_size_y) = domain_size
+        element_size = 1/density
+        assert (domain_size_x > element_size) and (domain_size_y > element_size), ''
 
         # single element is shared, since all elements have the same geometry
-        self.quads = [QuadElement(np.array([(0,0), (dx, 0), (dx, dy), (0, dy)]))]
+        self.quads = [QuadElement(np.array([(0,0), (element_size, 0), (element_size, element_size), (0, element_size)]))]
         # number of elements
-        (self.nelx, self.nely) = (int(dom_x/dx), int(dom_y/dy))
+        (self.nelx, self.nely) = (int(domain_size_x/element_size), int(domain_size_y/element_size))
         # grids of nodes and elements
         self.nodes = np.arange((self.nely+1)*(self.nelx+1)).reshape(self.nely+1, self.nelx+1)
         self.elements = np.arange(self.nely*self.nelx).reshape(self.nely, self.nelx)
@@ -123,7 +123,7 @@ class StructuredQuadMesh(QuadMesh):
             self.nodes, (2,2)
         ).reshape(self.elements.size, 4)[:,[0,1,3,2]] # node order is anti-clockwise, hence column indexing
 
-        (self.X, self.Y) = np.meshgrid(np.linspace(0, domain_size[0], 1+self.nelx), np.linspace(0, domain_size[1], 1+self.nely))
+        (self.X, self.Y) = np.meshgrid(np.linspace(0, domain_size_x, 1+self.nelx), np.linspace(0, domain_size_y, 1+self.nely))
 
     # forward the integration call to the single element
     def integrate(self, C_material: np.ndarray) -> np.ndarray : 
