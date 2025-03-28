@@ -90,7 +90,7 @@ class BinaryElasticMembraneModel():
                     C[(iN) * FEM.QuadElement.NODE_DOF + 1, (jN) * FEM.QuadElement.NODE_DOF + 0] += KeNNDOF[1, 0]
                     C[(iN) * FEM.QuadElement.NODE_DOF + 1, (jN) * FEM.QuadElement.NODE_DOF + 1] += KeNNDOF[1, 1]
 
-    def update(self, topology: Topology) -> bool :
+    def update(self, topology: Topology) :
         self.reset_model()
         self.fill_C_matrix(self.state.C, self.mesh.E, topology.mask.flatten(), self.Ke_material, self.Ke_void)
         self.state.add_boundary_condition(RigidEdge)
@@ -118,7 +118,7 @@ class BinaryElasticMembraneModel():
         DOF_arr = (2*self.mesh.E[:,:,np.newaxis] + DOF_arr_base).reshape(-1,DOF_arr_base.size)
         U = self.state.u[DOF_arr].reshape(-1, FEM.QuadElement.ELEMENT_DOF, 1)
 
-        return (U.transpose(0,2,1) @ Ke @ U).reshape(-1,1)
+        return (U.transpose(0,2,1) @ Ke @ U).reshape(self.mesh.elements.shape)
     
     def compute_tip_displacement(self) -> float : 
         raise NotImplemented('TODO')
