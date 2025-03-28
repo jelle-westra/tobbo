@@ -3,7 +3,7 @@ from shapely.geometry import MultiPolygon, Polygon, box
 
 from dataclasses import dataclass, replace
 
-from TO import Parameterization
+from TO import Parameterization, Topology
 
 @dataclass 
 class CapsuleConfig:
@@ -32,39 +32,52 @@ def compute_curve(cap: CapsuleConfig, t: np.ndarray) -> np.ndarray :
     return (R2D(phi) @ xy.T).T + (p1 + p2)/2
 
 
-def compute_polygon(cap: CapsuleConfig, n_samples: int=1000) -> Polygon : 
+def compute_polygon(cap: CapsuleConfig, n_samples: int) -> Polygon : 
     return Polygon(compute_curve(cap, np.linspace(0, 1, n_samples)))
 
-        
+@dataclass
 class Capsules(Parameterization):
-    def __init__(self, symmetry: bool) -> None :
-        self.symmetry = symmetry
+    topology: Topology 
+    n_components_x: int
+    n_components_y: int
+    symmetry_y: bool
+    n_samples: int
+    # TODO : symmetry_x
+    symmetry_x: bool=False
 
-        self.dimension = 15
-        self.domain = box(0, 0, 100, 50)
+    def __post_init__(self):
+        self.dimension = 5 * self.n_components_x * self.n_components_y
+        self.normalization_factors = np.array([
+            self.topology.domain_size_x, self.topology.domain_size_y,
+            self.topology.domain_size_x, self.topology.domain_size_y,
+            float('inf')
+        ])
+        if (self.symmetry_x) :
+            assert not(self.n_components_x % 2), 'for using symmetry the number of components in x-direction needs to be even'
+            self.normalization_factors[[0,2]] /= 2.
+            self.dimension = int(self.dimension/2)
 
-        self.n_samples = 1_000
+        if (self.symmetry_y) : 
+            assert not(self.n_components_y % 2), 'for using symmetry the number of components in y-direction needs to be even'
+            self.normalization_factors[[1,3]] /= 2.
+            self.dimension = int(self.dimension/2)
+        # taking the smallest as normalization for the width of the beam    
+        self.normalization_factors[-1] = min(self.normalization_factors)
 
-        self.normalization_factors = (
-            100, 
-            50/2 if symmetry else 50, 
-            100, 
-            50/2 if symmetry else 50, 
-            4*(5)
-        )
 
     def scale(self, x_configs: np.ndarray) -> np.ndarray :
         return x_configs*self.normalization_factors
     
     def compute_geometry(self, x: np.ndarray) -> np.ndarray :
-        x_configs = x.reshape(-1, 5)
+        x_configs = x.reshape(-1, len(self.normalization_factors))
         caps = [CapsuleConfig(*config) for config in self.scale(x_configs)]
-        if (self.symmetry) :
-            # TODO : use the domain to do this, something with the normalization factors
-            caps += [replace(cap, y1=50-cap.y1, y2=50-cap.y2) for cap in caps]
 
-        t = np.linspace(0, 1, self.n_samples)
+        if (self.symmetry_x) : # for all current configs mirror x-components
+            caps += [replace(cap, x1=self.topology.domain_size_x-cap.x1, x2=self.topology.domain_size_x-cap.x2) for cap in caps]
+        if (self.symmetry_y) : # for all currecnt configs mirror y-components, inlcuding ones just mirrored
+            caps += [replace(cap, y1=self.topology.domain_size_y-cap.y1, y2=self.topology.domain_size_y-cap.y2) for cap in caps]
+
         geo = MultiPolygon()
-        for cap in caps :
-            geo = geo.union(Polygon(compute_curve(cap, t)))
+        for cap in caps : # drawing and merging the polygons
+            geo = geo.union(compute_polygon(cap, self.n_samples))
         return geo
