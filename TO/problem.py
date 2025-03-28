@@ -81,7 +81,8 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
 
         volume_exceeded = (self.topology.mask.sum()/self.topology.mask.size > self.max_relative_volume)
         with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
-            handle.write(f'{self.count} {self.score} {self.response_vol:.6f} {volume_exceeded:d}\n') #{response_vol_original:.6f}\n')
+            handle.write(f'{self.count} {self.score} {self.response_vol:.6f} {volume_exceeded:d} ') #{response_vol_original:.6f}\n')
+            handle.write(' '.join(map(str, x)) + '\n')
 
         return self.score
     
