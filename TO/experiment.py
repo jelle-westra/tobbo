@@ -16,6 +16,7 @@ def run_experiment(
     sigma0: float,
     budget: int,
     seed: int,
+    name: str
 ) -> None :
     ioh_prob = ProblemInstance(topology, parameterization, model, budget)
 
@@ -26,7 +27,7 @@ def run_experiment(
 
     logger = ioh.logger.Analyzer(
         root=os.getcwd(),                  # Store data in the current working directory
-        folder_name=f'./results/{seed}',       # in a folder named: './Figures_Python/Run_{run_e}'
+        folder_name=f'./results/{name}/{seed}',       # in a folder named: './Figures_Python/Run_{run_e}'
         algorithm_name='CMA-ES',    # meta-data for the algorithm used to generate these results
         store_positions=True,               # store x-variables in the logged files
         triggers= triggers,

@@ -27,18 +27,18 @@ def check_package_status() :
             '</div>'
         ))
 
-def read_evals(seed: int, run: int=None) -> List[str] :
-    path = os.path.join(os.path.abspath(''), f'results/{seed}/evals.dat' if not(run) else f'results/{seed}-{run}/evals.dat')
+def read_evals(name: str, seed: int, run: int=None) -> List[str] :
+    path = os.path.join(os.path.abspath(''), f'results/{name}/{seed}/evals.dat' if not(run) else f'results/{name}/{seed}-{run}/evals.dat')
     with open(path, 'r') as handle : return handle.readlines()
 
-def get_fitness_values(seed: int, run: int=None) -> np.ndarray :
-    lines = read_evals(seed, run)
+def get_fitness_values(name: str, seed: int, run: int=None) -> np.ndarray :
+    lines = read_evals(name, seed, run)
     f = np.array([float(line.split()[1]) for line in lines])
     illegal = np.array([float(line.split()[2]) > 0 for line in lines])
     f[illegal] = float('inf')
     return f
 
-def get_best_config(seed: int, run: int=None) -> np.ndarray : 
-    lines = read_evals(seed, run)
+def get_best_config(name:str, seed: int, run: int=None) -> np.ndarray : 
+    lines = read_evals(name, seed, run)
     line_best = min(lines, key=lambda line : float(line.split()[1])) 
     return np.array([float(xi) for xi in line_best.split()[4:]])
