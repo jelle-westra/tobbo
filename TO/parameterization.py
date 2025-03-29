@@ -1,6 +1,6 @@
 import numpy as np
 from shapely.geometry import MultiPolygon, Polygon
-from rasterio.features import rasterize
+from rasterio.features import rasterize, shapes
 
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
@@ -16,8 +16,14 @@ class Parameterization(ABC) :
 
     @staticmethod
     def compute_geometry_from_image(mask: np.ndarray) -> MultiPolygon :
-        # TODO : here
-        raise NotImplemented('TODO')
+        polygons = [
+            (Polygon(poly['coordinates'][0]), bool(is_positive)) for (poly, is_positive) in 
+            shapes(mask.astype(np.uint8))
+        ]
+        geo: MultiPolygon = MultiPolygon((poly for (poly, is_positive) in polygons if is_positive))
+        for (poly, is_positive) in polygons:
+            if not(is_positive) and geo.contains(poly) : geo = geo.difference(poly)
+        return geo if isinstance(geo, MultiPolygon) else MultiPolygon([geo])
     
     @staticmethod
     def rasterize_geometry(geo: MultiPolygon) -> np.ndarray:
