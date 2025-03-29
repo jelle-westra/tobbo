@@ -140,7 +140,6 @@ class LinearSystem:
     f: np.ndarray
 
     mesh: Mesh
-    bcs: Set[LinearSystemBoundaryCondition]
 
     def __init__(self, mesh: Mesh):
         self.mesh = mesh
@@ -153,8 +152,8 @@ class LinearSystem:
 
         (self.ii_tril, self.jj_tril, self.ii_full, self.jj_full) = self.mesh.generate_sparse_pattern()
 
-    def add_boundary_condition(self, bc: LinearSystemBoundaryCondition) -> None :
-        if (bc not in self.bcs) : bc.apply(self)
+    def reset(self):
+        self.C[self.ii_tril, self.jj_tril] = self.u[:]= 0
 
     def solve_primary_field(self) : 
         C_sparse = sparse.csr_matrix(

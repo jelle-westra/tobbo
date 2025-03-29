@@ -4,21 +4,29 @@ from matplotlib.axes import Axes
 
 from dataclasses import dataclass
 from typing import Tuple
+from itertools import product
 
 from TO import FEM
 from TO.topology import Topology
 
+from TO.models._membrane_cython import fill_C_matrix as fill_C_matrix_c
+# from TO.models._membrane_cython import fill_C_matrix_rigid_nodes as fill_C_matrix_rigid_nodes_c
+
 class RigidEdge(FEM.LinearSystemBoundaryCondition) :
-    @staticmethod
-    def apply(state: FEM.LinearSystem) -> None :
-        # selecting the first column of the grid
-        nodes = state.mesh.nodes[:,0]
-        # setting all node components to 0
-        for i in range(FEM.QuadElement.NODE_DOF) : 
-            state.C[FEM.QuadElement.NODE_DOF * nodes + i, :] = 0.0
-            state.C[:, FEM.QuadElement.NODE_DOF * nodes + i] = 0.0
-            state.C[FEM.QuadElement.NODE_DOF * nodes + i, FEM.QuadElement.NODE_DOF * nodes + i] = 1.0
-            state.f[FEM.QuadElement.NODE_DOF * nodes + i, 0] = 0.0
+    def __init__(self, state: FEM.LinearSystem) :
+        nodes_rigid = state.mesh.nodes[:,0]
+        self.ii_nodes_rigid = (2*nodes_rigid + [[0], [1]]).flatten()
+
+        s = set(self.ii_nodes_rigid)
+        idx = [(i in s) or (j in s) for (i, j) in zip(state.ii_tril, state.jj_tril)]
+
+        self.ii_tril = state.ii_tril[idx]
+        self.jj_tril = state.jj_tril[idx]
+
+    def apply(self, state: FEM.LinearSystem) -> None :
+        state.C[self.ii_tril, self.jj_tril] = 0
+        state.C[self.ii_nodes_rigid, self.ii_nodes_rigid] = 1.
+        state.f[self.ii_nodes_rigid, 0]
 
 
 class TipLoad(FEM.LinearSystemBoundaryCondition) :
@@ -51,6 +59,8 @@ class BinaryElasticMembraneModel():
 
         self.topology = topology
 
+        self.rigid_edge: FEM.LinearSystemBoundaryCondition = RigidEdge(self.state)
+
     @staticmethod
     def calculate_C(E11: float, E22: float, G12: float, nu12: float) -> np.ndarray:
         nu21 = (E22 * nu12) / E11
@@ -64,45 +74,14 @@ class BinaryElasticMembraneModel():
         u5 = (q11 + q22 - 2*q12 + 4*q66)
 
         return (1/8)*np.array([[u1, u4, 0], [u4, u1, 0], [0, 0, u5]])
-    
-    @staticmethod
-    def fill_C_matrix(
-        C: np.ndarray,
-        E: np.ndarray,
-        mask: np.ndarray,
-        Ke_material: np.ndarray,
-        Ke_void: np.ndarray
-    ):
-        for elem_pos in range(len(mask)):
-            for ii in range(FEM.QuadElement.ELEMENT_NO_NODES):
-                # getting the vertex index in mesh (mesh vertex index)
-                iN = int(E[elem_pos, ii])
-
-                for jj in range(FEM.QuadElement.ELEMENT_NO_NODES):
-                    # getting the vertex index in mesh (mesh vertex index)
-                    jN = int(E[elem_pos, jj])
-                    if (iN < jN - 1) : break
-
-                    KeNNDOF = (Ke_material if mask[elem_pos] else Ke_void)[(ii) * FEM.QuadElement.NODE_DOF:(ii + 1) * FEM.QuadElement.NODE_DOF, (jj) * FEM.QuadElement.NODE_DOF:(jj + 1) * FEM.QuadElement.NODE_DOF]
-
-                    C[(iN) * FEM.QuadElement.NODE_DOF + 0, (jN) * FEM.QuadElement.NODE_DOF + 0] += KeNNDOF[0, 0]
-                    C[(iN) * FEM.QuadElement.NODE_DOF + 0, (jN) * FEM.QuadElement.NODE_DOF + 1] += KeNNDOF[0, 1]
-                    C[(iN) * FEM.QuadElement.NODE_DOF + 1, (jN) * FEM.QuadElement.NODE_DOF + 0] += KeNNDOF[1, 0]
-                    C[(iN) * FEM.QuadElement.NODE_DOF + 1, (jN) * FEM.QuadElement.NODE_DOF + 1] += KeNNDOF[1, 1]
 
     def update(self, topology: Topology) :
-        self.reset_model()
-        self.fill_C_matrix(self.state.C, self.mesh.E, topology.mask.flatten(), self.Ke_material, self.Ke_void)
-        self.state.add_boundary_condition(RigidEdge)
-        if (TipLoad not in self.state.bcs) : 
-            self.state.add_boundary_condition(TipLoad)
+        self.state.reset()
+        fill_C_matrix_c(self.state.C, self.mesh.E, topology.mask.flatten(), self.Ke_material, self.Ke_void)
+        self.rigid_edge.apply(self.state)
+        TipLoad.apply(self.state)
         self.solve_displacement()
         self.topology = topology
-
-    def reset_model(self) -> None :
-        self.state.C[:] = self.state.u[:] = 0
-        # since we clear the C matrix we have to impose the RigidEdge again after recalculating `C`
-        if (RigidEdge in self.state.bcs) : self.state.bcs.remove(RigidEdge)
         
     def solve_displacement(self) -> None : 
         self.state.solve_primary_field()
