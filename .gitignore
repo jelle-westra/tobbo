@@ -4,3 +4,7 @@ results/
 
 /*.ipynb
 run.py
+
+TO/build
+TO/models/*.c
+TO/models/*.so
