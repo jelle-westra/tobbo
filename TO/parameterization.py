@@ -1,5 +1,6 @@
 import numpy as np
 from shapely.geometry import MultiPolygon, Polygon
+from shapely.affinity import scale
 from rasterio.features import rasterize, shapes
 
 from dataclasses import dataclass
@@ -26,14 +27,16 @@ class Parameterization(ABC) :
         return geo if isinstance(geo, MultiPolygon) else MultiPolygon([geo])
     
     @staticmethod
-    def rasterize_geometry(geo: MultiPolygon) -> np.ndarray:
-        # TODO : use domain to do this
-        return rasterize(geo.geoms, (50, 100))
+    def rasterize_geometry(topology: Topology) -> np.ndarray:
+        return rasterize(
+            shapes=scale(topology.geometry, xfact=topology.density, yfact=topology.density, origin=(0,0)).geoms, 
+            out_shape=(int(topology.density*topology.domain_size_y), int(topology.density*topology.domain_size_x))
+        )
 
     def update_topology(self, topology: Topology, x: np.ndarray) -> None :
         geo = self.compute_geometry(x).intersection(topology.domain)
         topology.geometry = geo if isinstance(geo, MultiPolygon) else MultiPolygon([geo])
-        topology.mask = Parameterization.rasterize_geometry(topology.geometry).astype(bool)
+        topology.mask = Parameterization.rasterize_geometry(topology).astype(bool)
 
         if not(topology.continuous) : 
             topology.geometry = Parameterization.compute_geometry_from_image(topology.mask)
