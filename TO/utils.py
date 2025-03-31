@@ -42,3 +42,7 @@ def get_best_config(name:str, seed: int, run: int=None) -> np.ndarray :
     lines = read_evals(name, seed, run)
     line_best = min(lines, key=lambda line : float(line.split()[1])) 
     return np.array([float(xi) for xi in line_best.split()[4:]])
+
+def get_config(evaluation: int, name:str, seed: int, run: int=None) -> np.ndarray :
+    lines = read_evals(name, seed, run)
+    return np.array([float(xi) for xi in lines[evaluation+1].split()[4:]])
