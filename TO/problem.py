@@ -90,8 +90,7 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         self.update(x)
 
         # floor it to one pixel, and normalize
-        # TODO : use the domain here
-        A: float = (self.topology.geometry.area//1) / (100 * 50)
+        A: float = (self.topology.geometry.area//1) / (self.topology.domain_size_x*self.topology.domain_size_y)
 
         self.response_vol = max(A - self.max_relative_volume, 0)
         return self.response_vol
@@ -123,9 +122,8 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         D[D < 1/2] = 0
         d_MST = D.sum()
 
-        # TODO : use the domain here
-        pt: Point = Point(100, 50/2)
-        line: LineString = LineString([(0,0), (0,50)])
+        pt: Point = Point(self.topology.domain_size_x, self.topology.domain_size_y/2)
+        line: LineString = LineString([(0,0), (0,self.domain_size_y)])
 
         if (d_pt := self.topology.geometry.distance(pt)) > 1/2 : d_MST += d_pt
         if (d_line := self.topology.geometry.distance(line)) > 1/2 : d_MST += d_line
