@@ -123,7 +123,7 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         d_MST = D.sum()
 
         pt: Point = Point(self.topology.domain_size_x, self.topology.domain_size_y/2)
-        line: LineString = LineString([(0,0), (0,self.domain_size_y)])
+        line: LineString = LineString([(0,0), (0,self.topology.domain_size_y)])
 
         if (d_pt := self.topology.geometry.distance(pt)) > 1/2 : d_MST += d_pt
         if (d_line := self.topology.geometry.distance(line)) > 1/2 : d_MST += d_line
