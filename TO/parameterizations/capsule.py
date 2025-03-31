@@ -54,12 +54,12 @@ class Capsules(Parameterization):
         ])
         if (self.symmetry_x) :
             assert not(self.n_components_x % 2), 'for using symmetry the number of components in x-direction needs to be even'
-            self.normalization_factors[[0,2]] /= 2.
+            # self.normalization_factors[[0,2]] /= 2.
             self.dimension = int(self.dimension/2)
 
         if (self.symmetry_y) : 
             assert not(self.n_components_y % 2), 'for using symmetry the number of components in y-direction needs to be even'
-            self.normalization_factors[[1,3]] /= 2.
+            # self.normalization_factors[[1,3]] /= 2.
             self.dimension = int(self.dimension/2)
         # taking the smallest as normalization for the width of the beam    
         self.normalization_factors[-1] = min(self.normalization_factors)
