@@ -31,8 +31,7 @@ class MMCAngularConfig(MMCConfig):
         ])
         if (symmetry_x) : normalization_factors[0] /= 2.
         if (symmetry_y) : normalization_factors[1] /= 2.
-        # taking the smallest as normalization for the radius of the beam    
-        normalization_factors[[2,3]] = min(normalization_factors[[0,1]])
+        normalization_factors[[2,3]] = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
         return normalization_factors
     
     def to_angular(self) -> 'MMCAngularConfig' : return self 
@@ -52,8 +51,7 @@ class MMCEndpointsConfig(MMCConfig):
             topology.domain_size_x, topology.domain_size_y, # (x2, y2)
             float('nan') # (r)
             ])
-        # taking the smallest as normalization for the radius of the beam    
-        normalization_factors[-1] = min(normalization_factors[[0,1]])
+        normalization_factors[-1] = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
         return normalization_factors
     
     def to_angular(self) -> MMCAngularConfig :
