@@ -3,7 +3,7 @@
 results*/
 *.pkl
 
-/*.ipynb
+/notepad.ipynb
 run.py
 
 TO/build
