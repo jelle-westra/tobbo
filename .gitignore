@@ -9,3 +9,4 @@ run.py
 TO/build
 TO/models/*.c
 TO/models/*.so
+TO/models/*.pyd
