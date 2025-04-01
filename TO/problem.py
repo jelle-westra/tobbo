@@ -119,14 +119,14 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
          # this does not perform MST since it does not overwrite D (first its converted to sparse, it overwrites that instance)
         # TODO : make a boolean for this to activate or not
         D = minimum_spanning_tree(D, overwrite=True).toarray()
-        D[D < 1/2] = 0
+        D[D < 1/2/self.topology.density] = 0
         d_MST = D.sum()
 
         pt: Point = Point(self.topology.domain_size_x, self.topology.domain_size_y/2)
         line: LineString = LineString([(0,0), (0,self.topology.domain_size_y)])
 
-        if (d_pt := self.topology.geometry.distance(pt)) > 1/2 : d_MST += d_pt
-        if (d_line := self.topology.geometry.distance(line)) > 1/2 : d_MST += d_line
+        if (d_pt := self.topology.geometry.distance(pt)) > 1/2/self.topology.density : d_MST += d_pt
+        if (d_line := self.topology.geometry.distance(line)) > 1/2/self.topology.density : d_MST += d_line
         
         self.response_disc = d_MST
         return self.response_disc
