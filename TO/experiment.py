@@ -45,6 +45,7 @@ def run_experiment(
     np.random.seed(seed)
     x0 = np.random.rand(parameterization.dimension)
 
+    assert (seed != 0), 'If the seed is 0, cma will generate a seed by itself which will make the experiment not reporducible.'
     opts:cma.CMAOptions = {'bounds':[0,1],'tolfun':1e-6,'seed':seed,'verb_filenameprefix':os.path.join(logger.output_directory,'outcmaes/')}
 
     ioh_prob.attach_logger(logger)
