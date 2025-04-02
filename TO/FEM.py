@@ -148,8 +148,6 @@ class LinearSystem:
         self.f = np.zeros((mesh.nodes.size*QuadElement.NODE_DOF, 1), dtype=float)
         self.u = float('nan')*np.ones_like(self.f)
 
-        self.bcs = set()
-
         (self.ii_tril, self.jj_tril, self.ii_full, self.jj_full) = self.mesh.generate_sparse_pattern()
 
     def reset(self):
