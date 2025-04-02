@@ -119,5 +119,5 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
             # TODO : reintroduce the constraint values in the evals.txt just to be sure, just use constraint.response
             handle.write(f'{self.count} {self.score} ') #{response_vol_original:.6f}\n')
             handle.write(' '.join(map(str, x)) + '\n')
-
-        return self.score
+        # TODO : let's first check if the mesh is connected before evluating, sometimes it can generates negative values for the HORIZONTAL loading problem
+        return abs(self.score)
