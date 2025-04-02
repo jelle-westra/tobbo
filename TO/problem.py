@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 
 import ioh
 from ioh.iohcpp import RealConstraint
+from ioh import ConstraintEnforcement
 
 from .models import BinaryElasticMembraneModel
 from .parameterization import Parameterization
@@ -19,6 +20,7 @@ from .topology import Topology
 @dataclass
 class Constraint(ABC):
     weight: float
+    enforcement: ConstraintEnforcement
 
     @abstractmethod
     def compute(self, topology: Topology) -> float : ...
@@ -88,7 +90,7 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
             super().add_constraint(RealConstraint(
                 partial(self.compute_constraint, constraint),
                 name=str(constraint),
-                enforced=ioh.ConstraintEnforcement.HARD,
+                enforced=constraint.enforcement,
                 weight = constraint.weight, 
                 exponent=1.0
             ))
