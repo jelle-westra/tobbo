@@ -3,21 +3,19 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Set, List, Tuple
 from itertools import product
 
-from TO import FEM
-from TO.topology import Topology
+from .. import FEM
+from ..topology import Topology
 
 from TO.models._membrane_cython import fill_C_matrix as fill_C_matrix_c
-# from TO.models._membrane_cython import fill_C_matrix_rigid_nodes as fill_C_matrix_rigid_nodes_c
 
 class RigidEdge(FEM.LinearSystemBoundaryCondition) :
-    def __init__(self, state: FEM.LinearSystem) :
-        nodes_rigid = state.mesh.nodes[:,0]
-        self.ii_nodes_rigid = (2*nodes_rigid + [[0], [1]]).flatten()
+    def __init__(self, nodes: np.ndarray, state: FEM.LinearSystem) :
+        self.ii_nodes = (2*nodes + [[0], [1]]).flatten()
 
-        s = set(self.ii_nodes_rigid)
+        s = set(self.ii_nodes)
         idx = [(i in s) or (j in s) for (i, j) in zip(state.ii_tril, state.jj_tril)]
 
         self.ii_tril = state.ii_tril[idx]
@@ -25,17 +23,17 @@ class RigidEdge(FEM.LinearSystemBoundaryCondition) :
 
     def apply(self, state: FEM.LinearSystem) -> None :
         state.C[self.ii_tril, self.jj_tril] = 0
-        state.C[self.ii_nodes_rigid, self.ii_nodes_rigid] = 1.
-        state.f[self.ii_nodes_rigid, 0]
+        state.C[self.ii_nodes, self.ii_nodes] = 1.
+        state.f[self.ii_nodes, 0]
 
 
-class TipLoad(FEM.LinearSystemBoundaryCondition) :
-    @staticmethod
-    def apply(state: FEM.LinearSystem) -> None : 
-        # selecting the middle node of last column in grid
-        node = state.mesh.nodes[state.mesh.nodes.shape[0]//2,-1]
-        # setting the y-component of `node`
-        state.f[FEM.QuadElement.NODE_DOF * node + 1] = -0.1
+class Load(FEM.LinearSystemBoundaryCondition) :
+    def __init__(self, nodes: List[int], loads: List[Tuple[float, float]]) -> None :
+        (self.nodes, self.loads) = (np.asarray(nodes), np.asarray(loads))
+
+    def apply(self, state: FEM.LinearSystem) -> None : 
+        state.f[FEM.QuadElement.NODE_DOF * self.nodes + 0] = self.loads[:,0]
+        state.f[FEM.QuadElement.NODE_DOF * self.nodes + 1] = self.loads[:,1]
 
 
 class BinaryElasticMembraneModel():
@@ -46,7 +44,7 @@ class BinaryElasticMembraneModel():
         E22: float,
         G12: float,
         nu12: float,
-        Emin: float
+        Emin: float,
     ) -> None :
         self.mesh: FEM.StructuredQuadMesh = FEM.StructuredQuadMesh(topology.domain_size, topology.density)
         self.state: FEM.LinearSystem = FEM.LinearSystem(self.mesh)
@@ -59,7 +57,7 @@ class BinaryElasticMembraneModel():
 
         self.topology = topology
 
-        self.rigid_edge: FEM.LinearSystemBoundaryCondition = RigidEdge(self.state)
+        self.bcs: Set[FEM.LinearSystemBoundaryCondition] = set()
 
     @staticmethod
     def calculate_C(E11: float, E22: float, G12: float, nu12: float) -> np.ndarray:
@@ -78,14 +76,10 @@ class BinaryElasticMembraneModel():
     def update(self, topology: Topology) :
         self.state.reset()
         fill_C_matrix_c(self.state.C, self.mesh.E, topology.mask.flatten(), self.Ke_material, self.Ke_void)
-        self.rigid_edge.apply(self.state)
-        TipLoad.apply(self.state)
-        self.solve_displacement()
-        self.topology = topology
-        
-    def solve_displacement(self) -> None : 
+        for bc in self.bcs : bc.apply(self.state)
         self.state.solve_primary_field()
-
+        self.topology = topology
+    
     def compute_element_compliance(self) -> np.ndarray :
         DOF_arr_base = np.array(list(range(FEM.QuadElement.NODE_DOF))*FEM.QuadElement.ELEMENT_NO_NODES).reshape(
             FEM.QuadElement.ELEMENT_NO_NODES, FEM.QuadElement.NODE_DOF
