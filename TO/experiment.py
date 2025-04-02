@@ -10,16 +10,11 @@ import cma
 import os
 
 def run_experiment(
-    topology: Topology,
-    parameterization: Parameterization,
-    model: BinaryElasticMembraneModel,
+    problem: ProblemInstance,
     sigma0: float,
-    budget: int,
     seed: int,
     name: str
 ) -> None :
-    ioh_prob = ProblemInstance(topology, parameterization, model, budget)
-
     triggers = [
         ioh.logger.trigger.Each(1),
         ioh.logger.trigger.OnImprovement()
@@ -43,18 +38,18 @@ def run_experiment(
     )
 
     np.random.seed(seed)
-    x0 = np.random.rand(parameterization.dimension)
+    x0 = np.random.rand(problem.parameterization.dimension)
 
     assert (seed != 0), 'If the seed is 0, cma will generate a seed by itself which will make the experiment not reporducible.'
     opts:cma.CMAOptions = {'bounds':[0,1],'tolfun':1e-6,'seed':seed,'verb_filenameprefix':os.path.join(logger.output_directory,'outcmaes/')}
 
-    ioh_prob.attach_logger(logger)
-    ioh_prob.logger_output_directory = logger.output_directory
+    problem.attach_logger(logger)
+    problem.logger_output_directory = logger.output_directory
 
     try:
-        cma.fmin2(ioh_prob, x0, sigma0, restarts=0, bipop=True, options=opts)
+        cma.fmin2(problem, x0, sigma0, restarts=0, bipop=True, options=opts)
     except KeyboardInterrupt :
         pass
 
-    ioh_prob.reset()
+    problem.reset()
     logger.close()
