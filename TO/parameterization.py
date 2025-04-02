@@ -31,7 +31,7 @@ class Parameterization(ABC) :
         return rasterize(
             shapes=scale(topology.geometry, xfact=topology.density, yfact=topology.density, origin=(0,0)).geoms, 
             out_shape=(int(topology.density*topology.domain_size_y), int(topology.density*topology.domain_size_x))
-        )
+        )[::-1]
 
     def update_topology(self, topology: Topology, x: np.ndarray) -> None :
         geo = self.compute_geometry(x).intersection(topology.domain)
