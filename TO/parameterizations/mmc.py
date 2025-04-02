@@ -107,8 +107,7 @@ class MMC(Parameterization, ABC) :
         mmcs: List[MMCAngularConfig] = [self.representation(*config).to_angular() for config in self.scale(x_configs)]
 
         if (self.symmetry_x) : # for all current configs mirror x-components
-            raise NotImplemented('TODO : implement x-symmetry')
-            mmcs += [replace(mmc, x=self.topology.domain_size_x-mmc.x) for mmc in mmcs] # TODO : update theta
+            mmcs += [replace(mmc, x=self.topology.domain_size_x-mmc.x, theta=np.pi-mmc.theta) for mmc in mmcs]
         if (self.symmetry_y) : # for all currecnt configs mirror y-components, inlcuding ones just mirrored
             mmcs += [replace(mmc, y=self.topology.domain_size_y-mmc.y, theta=np.pi-mmc.theta) for mmc in mmcs]
 
