@@ -1,9 +1,13 @@
 import numpy as np
-from shapely import Point
+from scipy.sparse.csgraph import minimum_spanning_tree
+from shapely.geometry.base import BaseGeometry
 
 from dataclasses import dataclass
 from time import time
+from typing import List, Set
 import os
+from functools import partial
+from abc import ABC, abstractmethod
 
 import ioh
 from ioh.iohcpp import RealConstraint
@@ -12,28 +16,61 @@ from .models import BinaryElasticMembraneModel
 from .parameterization import Parameterization
 from .topology import Topology
 
+@dataclass
+class Constraint(ABC):
+    weight: float
+
+    @abstractmethod
+    def compute(self, topology: Topology) -> float : ...
+
+@dataclass
+class VolumeConstraint(Constraint):
+    max_relative_volume: float
+
+    def compute(self, topology: Topology) -> float :
+        A = (topology.geometry.area//1) / (topology.domain_size_x*topology.domain_size_y)
+        return max(A - self.max_relative_volume, 0)
+    
+@dataclass
+class DisconnectionConstraint(Constraint):
+    boundaries: List[BaseGeometry]
+
+    def compute(self, topology: Topology) -> float :
+        components = list(topology.geometry.geoms)
+
+        n = len(components)
+        D = np.zeros((n,n))
+        for i in range(n):
+            for j in range(i) :
+                    d = components[i].distance(components[j])
+                    # making sure the MST understands there is an edge, for 0 it thinks it's not connected,
+                    # also if the values get too low (<1e-8) this can happen
+                    D[i,j] = D[j,i] = d if (d > 1e-6) else -1
+
+        D = minimum_spanning_tree(D).toarray()
+        # TODO : reimplement desnity-based thresholding
+        D[D < 1/2] = 0
+        d = D.sum()
+
+        for boundary in self.boundaries :
+            if (distance_to_boundary := topology.geometry.distance(boundary)) > 1/2 : 
+                d += distance_to_boundary
+        return d
 
 @dataclass
 class ProblemInstance(ioh.problem.RealSingleObjective):
     topology: Topology
     parameterization: Parameterization
     model: BinaryElasticMembraneModel
-    # objective: Objective
+    topology_constraints: List[Constraint]
     budget: int
+    # objective: Objective
 
     def __post_init__(self) -> None :
         self.x = float('nan')*np.ones(self.parameterization.dimension)
         self.score = float('nan')
-
-        # TODO : make the constraints modular
-        self.max_relative_volume = 0.5
-
         # JELLE DEBUG
         self.count: int = 0
-        self.response_vol: float = 0
-        self.response_yaxis: float = 0
-        self.response_pt: float = 0
-        self.response_disc: float = 0
         self.start_time = time()
 
         bounds = ioh.iohcpp.RealBounds(self.parameterization.dimension, 0.0, 1.0)
@@ -47,20 +84,14 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
             bounds= bounds,
             optimum=optimum
         )
-        super().add_constraint(RealConstraint(
-            self.volume,
-            name='Volume condition',
-            enforced=ioh.ConstraintEnforcement.HARD,
-            weight = 1e9, 
-            exponent=1.0
-        ))
-        super().add_constraint(RealConstraint(
-            self.disconnection,
-            name='Disconnection condition',
-            enforced=ioh.ConstraintEnforcement.HARD,
-            weight = 1e3, 
-            exponent=1.0
-        ))
+        for constraint in self.topology_constraints:
+            super().add_constraint(RealConstraint(
+                partial(self.compute_constraint, constraint),
+                name=str(constraint),
+                enforced=ioh.ConstraintEnforcement.HARD,
+                weight = constraint.weight, 
+                exponent=1.0
+            ))
 
     def update(self, x:np.ndarray) -> None :
         # updating the topology geomtery and material mask
@@ -68,6 +99,11 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
             self.parameterization.update_topology(self.topology, x)
             self.score = float('nan')
             self.x = x
+
+    def compute_constraint(self, constraint: Constraint, x: np.ndarray) :
+        self.update(x) # updating the topology first if x has changed
+        constraint.response = constraint.compute(self.topology)
+        return constraint.response
 
     def evaluate(self, x):
         self.update(x)
@@ -79,54 +115,9 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         self.model.update(self.topology)
         self.score = self.model.compute_element_compliance().sum()
 
-        volume_exceeded = (self.topology.mask.sum()/self.topology.mask.size > self.max_relative_volume)
         with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
-            handle.write(f'{self.count} {self.score} {self.response_vol:.6f} {volume_exceeded:d} ') #{response_vol_original:.6f}\n')
+            # TODO : reintroduce the constraint values in the evals.txt just to be sure, just use constraint.response
+            handle.write(f'{self.count} {self.score} ') #{response_vol_original:.6f}\n')
             handle.write(' '.join(map(str, x)) + '\n')
 
         return self.score
-    
-    def volume(self, x: np.ndarray) -> float :
-        self.update(x)
-
-        # floor it to one pixel, and normalize
-        A: float = (self.topology.geometry.area//1) / (self.topology.domain_size_x*self.topology.domain_size_y)
-
-        self.response_vol = max(A - self.max_relative_volume, 0)
-        return self.response_vol
-    
-    
-    def disconnection(self, x: np.ndarray) -> float :
-        self.update(x)
-
-        # JELLE DEBUG :
-        if (self.count < 10) and (time() - self.start_time) > 60 : raise KeyboardInterrupt()
-
-        from shapely.geometry import Point, LineString
-        from scipy.sparse.csgraph import minimum_spanning_tree
-
-        components = list(self.topology.geometry.geoms)
-
-        n = len(components)
-        D = np.zeros((n,n))
-        for i in range(n):
-            for j in range(i) :
-                    d = components[i].distance(components[j])
-                    # making sure the MST understands there is an edge, for 0 it thinks it's not connected,
-                    # also if the values get too low (<1e-8) this can happen
-                    D[i,j] = D[j,i] = d if (d > 1e-6) else -1
-
-         # this does not perform MST since it does not overwrite D (first its converted to sparse, it overwrites that instance)
-        # TODO : make a boolean for this to activate or not
-        D = minimum_spanning_tree(D, overwrite=True).toarray()
-        D[D < 1/2/self.topology.density] = 0
-        d_MST = D.sum()
-
-        pt: Point = Point(self.topology.domain_size_x, self.topology.domain_size_y/2)
-        line: LineString = LineString([(0,0), (0,self.topology.domain_size_y)])
-
-        if (d_pt := self.topology.geometry.distance(pt)) > 1/2/self.topology.density : d_MST += d_pt
-        if (d_line := self.topology.geometry.distance(line)) > 1/2/self.topology.density : d_MST += d_line
-        
-        self.response_disc = d_MST
-        return self.response_disc
