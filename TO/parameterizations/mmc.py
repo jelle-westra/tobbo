@@ -15,6 +15,7 @@ class MMCConfig(ABC):
     @abstractmethod
     def to_angular(self) -> 'MMCAngularConfig' : ...
 
+
 @dataclass
 class MMCAngularConfig(MMCConfig):
     x: float
@@ -68,6 +69,27 @@ class MMCCenterpointsConfig(MMCEndpointsConfig):
     def to_angular(self) -> MMCAngularConfig :
         config: MMCAngularConfig = super().to_angular()
         return replace(config, rx=config.rx + self.r)
+    
+@dataclass
+class MMCAxiSymmetricConfig(MMCConfig):
+    # essentially a shape that has a single radius component, i.e. rx=ry
+    # and is axi-symmetric, theta = 0
+    x: float
+    y: float
+    r: float
+
+    @staticmethod
+    def get_normalization_factors(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray :
+        normalization_factors = np.array([
+            topology.domain_size_x, topology.domain_size_y, # (x,y, r)
+            np.hypot(topology.domain_size_x, topology.domain_size_y)/2
+        ])
+        if (symmetry_x) : normalization_factors[0] /= 2
+        if (symmetry_y) : normalization_factors[1] /= 2
+        return normalization_factors
+    
+    def to_angular(self) -> MMCAngularConfig:
+        return MMCAngularConfig(self.x, self.y, self.r, self.r, theta=0)
 
 @dataclass
 class MMC(Parameterization, ABC) :
@@ -83,7 +105,10 @@ class MMC(Parameterization, ABC) :
     def compute_base_polygon() -> Polygon : ...
 
     def __post_init__(self):
-        self.dimension = 5 * self.n_components_x * self.n_components_y
+        self.normalization_factors = self.representation.get_normalization_factors(
+            self.topology, self.symmetry_x, self.symmetry_y
+        )
+        self.dimension = len(self.normalization_factors) * self.n_components_x * self.n_components_y
         if (self.symmetry_x) :
             assert not(self.n_components_x % 2), 'for using symmetry the number of components in x-direction needs to be even'
             self.dimension = int(self.dimension/2)
@@ -92,9 +117,6 @@ class MMC(Parameterization, ABC) :
             assert not(self.n_components_y % 2), 'for using symmetry the number of components in y-direction needs to be even'
             self.dimension = int(self.dimension/2)
 
-        self.normalization_factors = self.representation.get_normalization_factors(
-            self.topology, self.symmetry_x, self.symmetry_y
-        )
         self.base_polygon: Polygon = self.compute_base_polygon()
 
     def scale(self, x_configs: np.ndarray) -> np.ndarray :
