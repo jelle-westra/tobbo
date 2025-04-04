@@ -70,7 +70,8 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
 
     def __post_init__(self) -> None :
         self.x = float('nan')*np.ones(self.parameterization.dimension)
-        self.score = float('nan')
+        self.x_best = self.x.copy()
+        self.score = self.score_best = float('inf')
         # JELLE DEBUG
         self.count: int = 0
         self.start_time = time()
@@ -116,7 +117,8 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         # we pass the new topology corresponding to`x` to the simulation
         self.model.update(self.topology)
         self.score = self.model.compute_element_compliance().sum()
-
+        
+        if (self.score < self.score_best) : (self.x_best, self.score_best) = (self.x.copy(), self.score)
         with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
             # TODO : reintroduce the constraint values in the evals.txt just to be sure, just use constraint.response
             handle.write(f'{self.count} {self.score} ') #{response_vol_original:.6f}\n')
