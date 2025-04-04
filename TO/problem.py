@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.sparse.csgraph import minimum_spanning_tree
 from shapely.geometry.base import BaseGeometry
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 
 from dataclasses import dataclass
 from time import time
@@ -125,3 +127,10 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
             handle.write(' '.join(map(str, x)) + '\n')
         # TODO : let's first check if the mesh is connected before evluating, sometimes it can generates negative values for the HORIZONTAL loading problem
         return abs(self.score)
+    
+    def plot_best(self, ax: Axes) :
+        self.parameterization.update_topology(self.topology, self.x_best)
+        self.topology.plot(ax)
+        for c in self.topology_constraints:
+            if hasattr(c, 'boundaries'):
+                for b in c.boundaries : ax.plot(*b.xy, 'ko--', lw=2)

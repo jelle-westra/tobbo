@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 from shapely.geometry import Polygon, MultiPolygon
 from dataclasses import dataclass
 
@@ -14,3 +16,10 @@ class Topology:
         
         geometry: MultiPolygon = None
         mask: np.ndarray = None
+
+    def plot(self, ax: Axes) :
+        ax.plot(*self.domain.exterior.xy, 'k', lw=.8)
+        for geo in self.geometry.geoms : 
+            ax.plot(*geo.exterior.xy, lw=2)
+            ax.fill(*geo.exterior.xy, alpha=.2)
+        ax.axis('equal')
