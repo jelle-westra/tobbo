@@ -1,5 +1,5 @@
 import numpy as np
-from shapely.geometry import MultiPolygon, Polygon
+from shapely.geometry import MultiPolygon, Polygon, GeometryCollection
 from shapely.affinity import scale
 from rasterio.features import rasterize, shapes
 
@@ -39,8 +39,11 @@ class Parameterization(ABC) :
         geo = self.compute_geometry(x).intersection(topology.domain)
         if (self.symmetry_x) : geo = geo.union(scale(geo, -1, 1, origin=(topology.domain_size_x/2,0)))
         if (self.symmetry_y) : geo = geo.union(scale(geo, 1, -1, origin=(0,topology.domain_size_y/2)))
-        topology.geometry = geo if isinstance(geo, MultiPolygon) else MultiPolygon([geo])
+        # baby-sitting shapely's dynamic typing
+        if isinstance(geo, GeometryCollection) : 
+            topology.geometry = MultiPolygon([obj for obj in geo.geoms if isinstance(obj, Polygon)])
+        else:
+            topology.geometry = geo if isinstance(geo, MultiPolygon) else MultiPolygon([geo])
         topology.mask = Parameterization.rasterize_geometry(topology).astype(bool)
-
         if not(topology.continuous) : 
             topology.geometry = Parameterization.compute_geometry_from_image(topology.mask)

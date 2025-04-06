@@ -72,5 +72,14 @@ class Cells(Parameterization, ABC):
     def compute_geometry(self, x: np.ndarray) -> MultiPolygon: ...
 
 class BinaryCells(Cells):
-    def compute_geometry(self, x: np.ndarray):
+    def compute_geometry(self, x: np.ndarray) -> MultiPolygon:
         return unary_union(self.cells[x > 0.5]).buffer(1e-2)
+
+class InfillCells(Cells):
+    def compute_geometry(self, x: np.ndarray) -> MultiPolygon:
+        # `xi` denotes the percentage of infill as with the MMC parameterizations
+        r = min(self.cell_size_x, self.cell_size_y)/2
+        return unary_union([
+            cell.difference(cell.buffer(-r*xi)).buffer(1e-2)
+            for (xi, cell) in zip(x, self.cells)
+        ])
