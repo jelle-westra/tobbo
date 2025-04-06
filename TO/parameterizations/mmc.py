@@ -135,9 +135,6 @@ class MMC(Parameterization, ABC) :
             if (self.infill_parameter) :
                 poly = poly.difference(poly.buffer(-min(mmc.rx, mmc.ry)*ins)).buffer(0.1)
             geo = geo.union(poly)
-        
-        if (self.symmetry_x) : geo = geo.union(scale(geo, -1, 1, origin=(self.topology.domain_size_x/2,0)))
-        if (self.symmetry_y) : geo = geo.union(scale(geo, 1, -1, origin=(0,self.topology.domain_size_y/2)))
         return geo
     
 # PARAMETERIZATIONS

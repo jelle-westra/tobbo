@@ -8,9 +8,11 @@ from abc import ABC, abstractmethod
 
 from .topology import Topology
 
+@dataclass
 class Parameterization(ABC) :
     topology: Topology
-    dimension: int
+    symmetry_x: bool
+    symmetry_y: bool
 
     @abstractmethod
     def compute_geometry(self, x: np.ndarray) -> MultiPolygon : ...
@@ -35,6 +37,8 @@ class Parameterization(ABC) :
 
     def update_topology(self, topology: Topology, x: np.ndarray) -> None :
         geo = self.compute_geometry(x).intersection(topology.domain)
+        if (self.symmetry_x) : geo = geo.union(scale(geo, -1, 1, origin=(topology.domain_size_x/2,0)))
+        if (self.symmetry_y) : geo = geo.union(scale(geo, 1, -1, origin=(0,topology.domain_size_y/2)))
         topology.geometry = geo if isinstance(geo, MultiPolygon) else MultiPolygon([geo])
         topology.mask = Parameterization.rasterize_geometry(topology).astype(bool)
 
