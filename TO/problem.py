@@ -67,7 +67,6 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
     parameterization: Parameterization
     model: BinaryElasticMembraneModel
     topology_constraints: List[Constraint]
-    budget: int
     # objective: Objective
 
     def __post_init__(self) -> None :
@@ -77,6 +76,7 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         # JELLE DEBUG
         self.count: int = 0
         self.start_time = time()
+        self.budget = float('inf')
 
         bounds = ioh.iohcpp.RealBounds(self.parameterization.dimension, 0.0, 1.0)
         optimum = ioh.iohcpp.RealSolution([0]*self.parameterization.dimension, 0.0)
@@ -97,6 +97,11 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
                 weight = constraint.weight, 
                 exponent=1.0
             ))
+
+    def set_budget(self, budget) : 
+        self.budget = budget
+        self.configs = np.nan*np.ones((self.budget, self.parameterization.dimension))
+        self.scores = np.nan*np.ones(self.budget)
 
     def update(self, x:np.ndarray) -> None :
         # updating the topology geomtery and material mask
@@ -121,6 +126,7 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         self.score = self.model.compute_element_compliance().sum()
         
         if (self.score < self.score_best) : (self.x_best, self.score_best) = (self.x.copy(), self.score)
+        (self.configs[self.count-1], self.scores[self.count-1]) = (x, self.score)
         with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
             # TODO : reintroduce the constraint values in the evals.txt just to be sure, just use constraint.response
             handle.write(f'{self.count} {self.score} ') #{response_vol_original:.6f}\n')
@@ -128,7 +134,8 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         # TODO : let's first check if the mesh is connected before evluating, sometimes it can generates negative values for the HORIZONTAL loading problem
         return abs(self.score)
     
-    def plot_best(self, ax: Axes) :
+    def plot_best(self, ax: Axes=None) :
+        if (ax is None) : ax = plt.gca()
         self.parameterization.update_topology(self.topology, self.x_best)
         self.topology.plot(ax)
         for c in self.topology_constraints:
