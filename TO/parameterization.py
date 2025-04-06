@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from .topology import Topology
 
 class Parameterization(ABC) :
-    domain: Polygon # bounding box
+    topology: Topology
     dimension: int
 
     @abstractmethod
