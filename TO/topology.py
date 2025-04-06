@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from shapely.geometry import Polygon, MultiPolygon
+from shapely.plotting import plot_polygon
 from dataclasses import dataclass
 
 @dataclass
@@ -17,9 +18,9 @@ class Topology:
         geometry: MultiPolygon = None
         mask: np.ndarray = None
 
-    def plot(self, ax: Axes) :
-        ax.plot(*self.domain.exterior.xy, 'k', lw=.8)
-        for geo in self.geometry.geoms : 
-            ax.plot(*geo.exterior.xy, lw=2)
-            ax.fill(*geo.exterior.xy, alpha=.2)
+    def plot(self, ax: Axes=None) :
+        if (ax is None) : ax = plt.gca()
+        plot_polygon(self.geometry, ax, add_points=False, lw=2)
+        ax.plot(*self.domain.exterior.xy, 'k')
+        ax.grid(False)
         ax.axis('equal')
