@@ -1,6 +1,6 @@
 import numpy as np
 from shapely.geometry import MultiPolygon, Polygon, box
-from shapely.affinity import scale, translate
+from shapely.affinity import rotate, scale, translate
 from shapely import unary_union
 
 from abc import ABC, abstractmethod
@@ -22,6 +22,10 @@ class GridSampler(ABC):
         cell_size_x: float, cell_size_y: float
     ) -> Tuple[np.ndarray, np.ndarray]: ...
 
+    def compute_cell(self, cell: Polygon, x: float, y: float, i: int, j:int) -> Polygon :
+        # transforming the unit_cell to grid-based cell, for regular grids just translation is enough
+        return translate(cell, x, y)
+
 class RectangularGrid(GridSampler):
     @staticmethod
     def compute( 
@@ -40,43 +44,57 @@ class RectangularGrid(GridSampler):
         Y += domain_size_y/2 - Y.mean()
         return (X, Y)
     
+@dataclass
 class AlternatingGrid(GridSampler, ABC):
-    @staticmethod
-    @abstractmethod
-    def delta_x(cell_size_x: float, cell_size_y: float) -> float : ...
+    horizontal: bool
 
-    @staticmethod
     @abstractmethod
-    def delta_y(cell_size_x: float, cell_size_y: float) -> float : ...
+    def delta_x_horizontal(self, cell_size_x: float, cell_size_y: float) -> float : ...
 
-    @classmethod
-    def compute(cls,
+    @abstractmethod
+    def delta_y_horizontal(self, cell_size_x: float, cell_size_y: float) -> float : ...
+
+    def compute(self,
         topology: Topology,
         symmetry_x: bool, symmetry_y: bool,
         cell_size_x: float, cell_size_y: float
     ) -> Tuple[np.ndarray, np.ndarray]:
-        delta_x = cls.delta_x(cell_size_x, cell_size_y)
-        delta_y = cls.delta_y(cell_size_x, cell_size_y)
+        delta_x = self.delta_x_horizontal(cell_size_x, cell_size_y)
+        delta_y = self.delta_y_horizontal(cell_size_x, cell_size_y)
+        if not(self.horizontal) : (delta_x, delta_y) = (delta_y, delta_x)
         
         (X, Y) = RectangularGrid.compute(topology, symmetry_x, symmetry_y, delta_x, delta_y)
-        Y[0::2] += delta_y/4
-        Y[1::2] -= delta_y/4
+        if (self.horizontal) :
+            X[:, 0::2] += delta_x/4
+            X[:, 1::2] -= delta_x/4
+        else:
+            Y[0::2] += delta_y/4
+            Y[1::2] -= delta_y/4
         return (X, Y)
 
 class HexGrid(AlternatingGrid):
-    def delta_x(cell_size_x: float, cell_size_y: float) -> float :
-        return 3*cell_size_x/4
-    
-    def delta_y(cell_size_x: float, cell_size_y: float) -> float :
+    def delta_x_horizontal(self, cell_size_x: float, cell_size_y: float) -> float :
         return np.sqrt(3)*cell_size_y/2
     
-class DiamondGrid(AlternatingGrid):
-    def delta_x(cell_size_x: float, cell_size_y: float) -> float :
-        delta_y = DiamondGrid.delta_y(cell_size_x, cell_size_y)
-        return np.sqrt(cell_size_x**2 - (delta_y/2)**2)
+    def delta_y_horizontal(self, cell_size_x: float, cell_size_y: float) -> float :
+        return 3*cell_size_x/4
     
-    def delta_y(cell_size_x: float, cell_size_y: float) -> float :
+    def compute_cell(self, cell: Polygon, x: float, y: float, i: int, j: int):
+        if (self.horizontal) :
+            return translate(rotate(cell, 90), x, y)
+        return super().compute_cell(cell, x, y, i, j)
+
+    
+class DiamondGrid(AlternatingGrid):
+    def delta_x_horizontal(self, cell_size_x: float, cell_size_y: float) -> float :
         return np.hypot(cell_size_x, cell_size_y)
+    
+    def delta_y_horizontal(self, cell_size_x: float, cell_size_y: float) -> float :
+        delta_x = self.delta_x_horizontal(cell_size_x, cell_size_y)
+        return np.sqrt(cell_size_x**2 - (delta_x/2)**2)
+    
+    def compute_cell(self, cell: Polygon, x: float, y: float, i: int, j: int):
+        return translate(rotate(cell, 45), x, y)
 
 @dataclass
 class Cells(Parameterization, ABC):
@@ -89,9 +107,9 @@ class Cells(Parameterization, ABC):
         self.cell: Polygon = scale(self.unit_cell, self.cell_size_x/2, self.cell_size_y/2)
         (self.X, self.Y) = self.sampler.compute(self.topology, self.symmetry_x, self.symmetry_y, self.cell_size_x, self.cell_size_y)
         self.dimension = self.X.size
-        # pre-shift all geometry to cell centers
+        # calculate the geo of the tiling
         self.cells: np.ndarray[Polygon] = np.array([
-            translate(self.cell, x, y) for (x, y) in zip(self.X.flatten(), self.Y.flatten())
+            self.sampler.compute_cell(self.cell, self.X[i,j], self.Y[i,j], i, j) for i in range(len(self.X)) for j in range(len(self.X[0]))
         ])
 
     @abstractmethod
