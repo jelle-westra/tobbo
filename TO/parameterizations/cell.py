@@ -40,17 +40,43 @@ class RectangularGrid(GridSampler):
         Y += domain_size_y/2 - Y.mean()
         return (X, Y)
     
-class HexGrid(GridSampler):
+class AlternatingGrid(GridSampler, ABC):
     @staticmethod
-    def compute( 
+    @abstractmethod
+    def delta_x(cell_size_x: float, cell_size_y: float) -> float : ...
+
+    @staticmethod
+    @abstractmethod
+    def delta_y(cell_size_x: float, cell_size_y: float) -> float : ...
+
+    @classmethod
+    def compute(cls,
         topology: Topology,
         symmetry_x: bool, symmetry_y: bool,
         cell_size_x: float, cell_size_y: float
     ) -> Tuple[np.ndarray, np.ndarray]:
-        (X, Y) = RectangularGrid.compute(topology, symmetry_x, symmetry_y, 3*cell_size_x/4, np.sqrt(3)*cell_size_y/2)
-        Y[0::2] += np.sqrt(3)/8*cell_size_y
-        Y[1::2] -= np.sqrt(3)/8*cell_size_y
+        delta_x = cls.delta_x(cell_size_x, cell_size_y)
+        delta_y = cls.delta_y(cell_size_x, cell_size_y)
+        
+        (X, Y) = RectangularGrid.compute(topology, symmetry_x, symmetry_y, delta_x, delta_y)
+        Y[0::2] += delta_y/4
+        Y[1::2] -= delta_y/4
         return (X, Y)
+
+class HexGrid(AlternatingGrid):
+    def delta_x(cell_size_x: float, cell_size_y: float) -> float :
+        return 3*cell_size_x/4
+    
+    def delta_y(cell_size_x: float, cell_size_y: float) -> float :
+        return np.sqrt(3)*cell_size_y/2
+    
+class DiamondGrid(AlternatingGrid):
+    def delta_x(cell_size_x: float, cell_size_y: float) -> float :
+        delta_y = DiamondGrid.delta_y(cell_size_x, cell_size_y)
+        return np.sqrt(cell_size_x**2 - (delta_y/2)**2)
+    
+    def delta_y(cell_size_x: float, cell_size_y: float) -> float :
+        return np.hypot(cell_size_x, cell_size_y)
 
 @dataclass
 class Cells(Parameterization, ABC):
