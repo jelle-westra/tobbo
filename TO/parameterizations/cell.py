@@ -95,6 +95,29 @@ class DiamondGrid(AlternatingGrid):
     
     def compute_cell(self, cell: Polygon, x: float, y: float, i: int, j: int):
         return translate(rotate(cell, 45), x, y)
+    
+@dataclass
+class TriGrid(GridSampler):
+    horizontal: bool
+
+    def compute(self,
+        topology: Topology,
+        symmetry_x: bool, symmetry_y: bool,
+        cell_size_x: float, cell_size_y: float
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        return RectangularGrid.compute(
+            topology, symmetry_x, symmetry_y, 
+            cell_size_x/2 if (self.horizontal) else cell_size_x, 
+            cell_size_y if (self.horizontal) else cell_size_y/2
+        )
+    
+    def compute_cell(self, cell: Polygon, x: float, y: float, i: int, j:int) -> Polygon :
+        if (self.horizontal):
+            cell_oriented = scale(cell, 1, -1 if (i%2 ^ j%2) else 1, origin=(0,0))
+        else:
+            cell_oriented = rotate(cell, 90, origin=(0,0))
+            cell_oriented = scale(cell_oriented, -1 if (i%2 ^ j%2) else 1, 1, origin=(0,0))
+        return translate(cell_oriented, x, y)
 
 @dataclass
 class Cells(Parameterization, ABC):
