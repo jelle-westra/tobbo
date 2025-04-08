@@ -1,10 +1,11 @@
 import numpy as np
-from shapely.geometry import MultiPolygon, Polygon, box
+from shapely.geometry import Polygon, box
 from shapely.affinity import scale, rotate, translate
+from shapely import unary_union
 
 from dataclasses import dataclass, replace
 from abc import ABC, abstractmethod
-from typing import List, Union
+from typing import List
 
 from TO import Parameterization, Topology
 
@@ -12,6 +13,14 @@ __all__ = [
     'MMCConfig', 'MMCAngularConfig', 'MMCEndpointsConfig', 'MMCCenterpointsConfig', 'MMCAxiSymmetricConfig', 'MMC'
     'Rectangles', 'Capsules', 'LameCurves', 'Ellipses', 'Circles'
 ]
+
+def sample_equidistant_pts(pts: np.ndarray, n_samples: int) -> np.ndarray :
+    # inspiration from : https://stackoverflow.com/questions/19117660/how-to-generate-equispaced-interpolating-values
+    d = np.zeros(len(pts)) # cumulative distance over the points
+    d[1:] = np.linalg.norm(np.diff(pts, axis=0), axis=1).cumsum()
+
+    d_equidistant = np.linspace(0,d.max(),n_samples) # sampling equidistant points
+    return np.c_[[np.interp(d_equidistant, d, xi) for xi in pts.T]].T
 
 class MMCConfig(ABC):
     @staticmethod
@@ -95,24 +104,69 @@ class MMCAxiSymmetricConfig(MMCConfig):
     def to_angular(self) -> MMCAngularConfig:
         return MMCAngularConfig(self.x, self.y, self.r, self.r, theta=0)
 
+class ShapeTransformer(ABC):
+    dimension: int
+
+    @staticmethod
+    @abstractmethod
+    def get_normalization_factors(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray : ...
+
+    @staticmethod
+    def transform_pre_scale_x(geo: Polygon, config: MMCAngularConfig, x: np.ndarray) -> Polygon :
+        return geo
+    
+    @staticmethod
+    def transform_pre_scale_y(geo: Polygon, config: MMCAngularConfig, x: np.ndarray) -> Polygon :
+        return geo
+
+class StraightBeam(ShapeTransformer):
+    dimension: int = 0
+    @staticmethod
+    def get_normalization_factors(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray :
+        return np.array([])
+
+class InfillBeam(StraightBeam) : ...
+    
+class GuoBeam(StraightBeam):
+    dimension: int = 5
+
+    def __init__(self, n_samples: int) : self.n_samples = n_samples
+
+    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
+        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
+        return np.array([self.rnorm, self.rnorm, self.rnorm/4, self.rnorm/4, 2*np.pi])
+
+    def transform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray):
+        (r_left, r_right, a, b, phi) = x_scaled.flatten()
+        (a, b, phi) = (a-self.rnorm/8, b-self.rnorm/8, phi-np.pi)
+
+        (x, y) = sample_equidistant_pts(np.c_[geo.exterior.xy], self.n_samples).T
+
+        ry = (r_left + r_right - 2*config.ry) / 2 * (x/config.rx)**2 + (r_right - r_left)/2 * (x/config.rx) + config.ry
+        f = a*np.sin(b*(x/config.rx + phi))
+        y = (f + ry*y)/config.ry
+        
+        return Polygon(np.c_[x, y])
+
 @dataclass
 class MMC(Parameterization, ABC) :
     topology: Topology 
     n_components: int
     symmetry_x: bool
     symmetry_y: bool
-    infill_parameter: bool
     representation: MMCConfig
+    transformer: ShapeTransformer
     n_samples: int
 
     @abstractmethod
     def compute_base_polygon() -> Polygon : ...
 
     def __post_init__(self):
-        self.normalization_factors = self.representation.get_normalization_factors(
-            self.topology, self.symmetry_x, self.symmetry_y
-        )
-        self.dimnesion_per_mmc = len(self.normalization_factors) + self.infill_parameter
+        self.normalization_factors = np.r_[
+            self.representation.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
+            self.transformer.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
+        ]
+        self.dimnesion_per_mmc = len(self.normalization_factors)
         self.dimension = self.dimnesion_per_mmc * self.n_components
         self.base_polygon: Polygon = self.compute_base_polygon()
 
@@ -120,26 +174,26 @@ class MMC(Parameterization, ABC) :
         return x_configs*self.normalization_factors
     
     def compute_geometry(self, x: np.ndarray) -> np.ndarray :
-        x_configs = x.reshape(-1, self.dimnesion_per_mmc)
-        if (self.infill_parameter) : 
-            x_infill = x_configs[:,-1]
-            x_configs = x_configs[:,:-1]
-        else:
-            x_infill = np.zeros(len(x_configs))
-
-        mmcs: List[MMCAngularConfig] = [self.representation(*config).to_angular() for config in self.scale(x_configs)]
-
-        geo = MultiPolygon() # drawing and merging the polygons
-        for (mmc, ins) in zip(mmcs, x_infill) : 
-            poly = self.compute_polygon(mmc)
-            if (self.infill_parameter) :
-                poly = poly.difference(poly.buffer(-min(mmc.rx, mmc.ry)*ins)).buffer(0.1)
-            geo = geo.union(poly)
-        return geo
+        x_configs = self.scale(x.reshape(-1, self.dimnesion_per_mmc))
+        if (self.transformer.dimension > 0) :
+            (x_mmc, x_transformer) = (x_configs[:,:-self.transformer.dimension], x_configs[:,-self.transformer.dimension:])
+        else :
+            (x_mmc, x_transformer) = (x_configs, np.array([]))
+  
+        mmcs: List[MMCAngularConfig] = [self.representation(*config).to_angular() for config in x_mmc]
+        return unary_union([self.compute_polygon(config, x_transformer) for config in mmcs])
     
-    def compute_polygon(self, config: MMCAngularConfig) -> Polygon :
+    def compute_polygon(self, config: MMCAngularConfig, x_transformer: np.ndarray) -> Polygon :
         return translate(rotate(
-            self.scale_y(self.scale_x(self.base_polygon, config), config), # scaling
+            self.scale_y(
+                self.transformer.transform_pre_scale_y(
+                    self.scale_x(
+                        self.transformer.transform_pre_scale_x( 
+                            self.base_polygon, config, x_transformer # pre-scale x
+                        ), config # scale x
+                    ), config, x_transformer # pre-scale y
+                ), config # scale y
+            ), # scaling
             config.theta, use_radians=True # rotate
         ), config.x, config.y) # translate
     
