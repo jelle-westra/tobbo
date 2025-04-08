@@ -137,18 +137,24 @@ class MMC(Parameterization, ABC) :
             geo = geo.union(poly)
         return geo
     
+    def compute_polygon(self, config: MMCAngularConfig) -> Polygon :
+        return translate(rotate(
+            self.scale_y(self.scale_x(self.base_polygon, config), config), # scaling
+            config.theta, use_radians=True # rotate
+        ), config.x, config.y) # translate
+    
+    def scale_x(self, geo: Polygon, config: MMCAngularConfig) -> Polygon : 
+        return scale(geo, config.rx, 1)
+
+    def scale_y(self, geo: Polygon, config: MMCAngularConfig) -> Polygon : 
+        return scale(geo, 1, config.ry)
+    
 # PARAMETERIZATIONS
 
 class Rectangles(MMC):
     def compute_base_polygon(self) -> Polygon :
         assert (self.n_samples >= 4), ''
         return box(-1, -1, 1, 1) # independent on the number of samples
-    
-    def compute_polygon(self, config: MMCAngularConfig) -> Polygon :
-        return translate(rotate(scale(
-                self.base_polygon, config.rx, config.ry # scale
-            ), config.theta, use_radians=True # rotate
-        ), config.x, config.y) # translate
 
 class Capsules(MMC) :
     def compute_base_polygon(self) -> Polygon :
@@ -156,21 +162,17 @@ class Capsules(MMC) :
         # on `compute_polygon` we then first move this semicircle to the endpoint mirror and connect it to the other side
         return Polygon(np.c_[np.cos(t := np.linspace(-np.pi/2, np.pi/2, self.n_samples//2)), np.sin(t)])
 
-    def compute_polygon(self, config: MMCAngularConfig) -> Polygon :
+    def scale_x(self, geo: Polygon, config: MMCAngularConfig) -> Polygon :
         r = min(config.rx, config.ry)
         # move the semi-circle to the capsules endpoint
-        poly: Polygon = translate(scale(self.base_polygon, r, r, origin=(0,0)), config.rx-r, 0).union(
-            box(0,-r, config.rx-r, r) # adding the straight middle portion of the capsule
+        geo: Polygon = translate(scale(geo, r, 1, origin=(0,0)), config.rx-r, 0).union(
+            box(0,-1, config.rx-r, 1) # adding the straight middle portion of the capsule
         ).buffer(1e-3)
         # mirroring the half capsule on the y-axis to create the full geo
-        poly = poly.union(scale(poly, -1, 1, origin=(0,0))).buffer(1e-3)
-
-        return translate(rotate(
-            poly, config.theta, use_radians=True # rotate
-        ), config.x, config.y) # translate
+        return geo.union(scale(geo, -1, 1, origin=(0,0))).buffer(1e-3)
     
 @dataclass
-class LameCurves(Rectangles):
+class LameCurves(MMC):
     m: int
 
     def compute_base_polygon(self) -> Polygon :
@@ -187,4 +189,3 @@ class Ellipses(LameCurves):
 class Circles(Ellipses):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, representation=MMCAxiSymmetricConfig)
-
