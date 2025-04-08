@@ -178,10 +178,10 @@ class MMC(Parameterization, ABC) :
         if (self.transformer.dimension > 0) :
             (x_mmc, x_transformer) = (x_configs[:,:-self.transformer.dimension], x_configs[:,-self.transformer.dimension:])
         else :
-            (x_mmc, x_transformer) = (x_configs, np.array([]))
+            (x_mmc, x_transformer) = (x_configs, np.array([[]]*len(x_configs)))
   
         mmcs: List[MMCAngularConfig] = [self.representation(*config).to_angular() for config in x_mmc]
-        return unary_union([self.compute_polygon(config, x_transformer) for config in mmcs])
+        return unary_union([self.compute_polygon(config, x_tr) for (config, x_tr) in zip(mmcs, x_transformer)])
     
     def compute_polygon(self, config: MMCAngularConfig, x_transformer: np.ndarray) -> Polygon :
         return translate(rotate(
