@@ -104,7 +104,7 @@ class MMCAxiSymmetricConfig(MMCConfig):
     def to_angular(self) -> MMCAngularConfig:
         return MMCAngularConfig(self.x, self.y, self.r, self.r, theta=0)
 
-class ShapeTransformer(ABC):
+class MMCDeformer(ABC):
     dimension: int
 
     @staticmethod
@@ -112,14 +112,14 @@ class ShapeTransformer(ABC):
     def get_normalization_factors(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray : ...
 
     @staticmethod
-    def transform_pre_scale_x(geo: Polygon, config: MMCAngularConfig, x: np.ndarray) -> Polygon :
+    def deform_pre_scale_x(geo: Polygon, config: MMCAngularConfig, x: np.ndarray) -> Polygon :
         return geo
     
     @staticmethod
-    def transform_pre_scale_y(geo: Polygon, config: MMCAngularConfig, x: np.ndarray) -> Polygon :
+    def deform_pre_scale_y(geo: Polygon, config: MMCAngularConfig, x: np.ndarray) -> Polygon :
         return geo
 
-class StraightBeam(ShapeTransformer):
+class StraightBeam(MMCDeformer):
     dimension: int = 0
     @staticmethod
     def get_normalization_factors(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray :
@@ -138,7 +138,7 @@ class GuoBeam(StraightBeam):
         # and b -> [-2, 2]
         return np.array([1, 1, self.rnorm, 4, np.pi])
 
-    def transform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray):
+    def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray):
         (r_left, r_right, a, b, phi) = x_scaled.flatten()
         (a, b, phi) = (a-self.rnorm/2, b-2, phi-np.pi/2)
 
@@ -161,7 +161,7 @@ class MMC(Parameterization, ABC) :
     symmetry_x: bool
     symmetry_y: bool
     representation: MMCConfig
-    transformer: ShapeTransformer
+    deformer: MMCDeformer
     n_samples: int
 
     @abstractmethod
@@ -170,7 +170,7 @@ class MMC(Parameterization, ABC) :
     def __post_init__(self):
         self.normalization_factors = np.r_[
             self.representation.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
-            self.transformer.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
+            self.deformer.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
         ]
         self.dimnesion_per_mmc = len(self.normalization_factors)
         self.dimension = self.dimnesion_per_mmc * self.n_components
@@ -181,23 +181,23 @@ class MMC(Parameterization, ABC) :
     
     def compute_geometry(self, x: np.ndarray) -> np.ndarray :
         x_configs = self.scale(x.reshape(-1, self.dimnesion_per_mmc))
-        if (self.transformer.dimension > 0) :
-            (x_mmc, x_transformer) = (x_configs[:,:-self.transformer.dimension], x_configs[:,-self.transformer.dimension:])
+        if (self.deformer.dimension > 0) :
+            (x_mmc, x_deformer) = (x_configs[:,:-self.deformer.dimension], x_configs[:,-self.deformer.dimension:])
         else :
-            (x_mmc, x_transformer) = (x_configs, np.array([[]]*len(x_configs)))
+            (x_mmc, x_deformer) = (x_configs, np.array([[]]*len(x_configs)))
   
         mmcs: List[MMCAngularConfig] = [self.representation(*config).to_angular() for config in x_mmc]
-        return unary_union([self.compute_polygon(config, x_tr) for (config, x_tr) in zip(mmcs, x_transformer)])
+        return unary_union([self.compute_polygon(config, x_tr) for (config, x_tr) in zip(mmcs, x_deformer)])
     
-    def compute_polygon(self, config: MMCAngularConfig, x_transformer: np.ndarray) -> Polygon :
+    def compute_polygon(self, config: MMCAngularConfig, x_deformer: np.ndarray) -> Polygon :
         return translate(rotate(
             self.scale_y(
-                self.transformer.transform_pre_scale_y(
+                self.deformer.deform_pre_scale_y(
                     self.scale_x(
-                        self.transformer.transform_pre_scale_x( 
-                            self.base_polygon, config, x_transformer # pre-scale x
+                        self.deformer.deform_pre_scale_x( 
+                            self.base_polygon, config, x_deformer # pre-scale x
                         ), config # scale x
-                    ), config, x_transformer # pre-scale y
+                    ), config, x_deformer # pre-scale y
                 ), config # scale y
             ), # scaling
             config.theta, use_radians=True # rotate
