@@ -172,15 +172,15 @@ class MMC(Parameterization, ABC) :
             self.representation.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
             self.deformer.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
         ]
-        self.dimnesion_per_mmc = len(self.normalization_factors)
-        self.dimension = self.dimnesion_per_mmc * self.n_components
+        self.dimension_per_mmc = len(self.normalization_factors)
+        self.dimension = self.dimension_per_mmc * self.n_components
         self.base_polygon: Polygon = self.compute_base_polygon()
 
     def scale(self, x_configs: np.ndarray) -> np.ndarray :
         return x_configs*self.normalization_factors
     
     def compute_geometry(self, x: np.ndarray) -> np.ndarray :
-        x_configs = self.scale(x.reshape(-1, self.dimnesion_per_mmc))
+        x_configs = self.scale(x.reshape(-1, self.dimension_per_mmc))
         if (self.deformer.dimension > 0) :
             (x_mmc, x_deformer) = (x_configs[:,:-self.deformer.dimension], x_configs[:,-self.deformer.dimension:])
         else :
