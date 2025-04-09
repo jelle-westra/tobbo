@@ -134,11 +134,17 @@ class GuoBeam(StraightBeam):
 
     def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
         self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
-        return np.array([self.rnorm, self.rnorm, self.rnorm/4, self.rnorm/4, 2*np.pi])
+        # we normalize r1 and r2 as it is -> 0-1 instead of rnorm
+        # and b -> [-2, 2]
+        return np.array([1, 1, self.rnorm, 4, np.pi])
 
     def transform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray):
         (r_left, r_right, a, b, phi) = x_scaled.flatten()
-        (a, b, phi) = (a-self.rnorm/8, b-self.rnorm/8, phi-np.pi)
+        (a, b, phi) = (a-self.rnorm/2, b-2, phi-np.pi/2)
+
+        # let's linearly map 0-1 to 0.25-4 * config.ry
+        r_left = ((4 - 0.25)*r_left + 0.25) * config.ry
+        r_right = ((4 - 0.25)*r_right + 0.25) * config.ry
 
         (x, y) = sample_equidistant_pts(np.c_[geo.exterior.xy], self.n_samples).T
 
@@ -146,7 +152,7 @@ class GuoBeam(StraightBeam):
         f = a*np.sin(b*(x/config.rx + phi))
         y = (f + ry*y)/config.ry
         
-        return Polygon(np.c_[x, y])
+        return Polygon(np.c_[x, y]).buffer(1e-2)
 
 @dataclass
 class MMC(Parameterization, ABC) :
