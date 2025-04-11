@@ -204,10 +204,10 @@ class MMC(Parameterization, ABC) :
         ), config.x, config.y) # translate
     
     def scale_x(self, geo: Polygon, config: MMCAngularConfig) -> Polygon : 
-        return scale(geo, config.rx, 1)
+        return scale(geo, config.rx, 1, origin=(0,0))
 
     def scale_y(self, geo: Polygon, config: MMCAngularConfig) -> Polygon : 
-        return scale(geo, 1, config.ry)
+        return scale(geo, 1, config.ry, origin=(0,0))
     
 # PARAMETERIZATIONS
 
