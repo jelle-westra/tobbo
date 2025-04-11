@@ -5,7 +5,7 @@ from shapely import unary_union
 
 from dataclasses import dataclass, replace
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, ClassVar
 
 from TO import Parameterization, Topology
 
@@ -23,9 +23,14 @@ def sample_equidistant_pts(pts: np.ndarray, n_samples: int) -> np.ndarray :
     return np.c_[[np.interp(d_equidistant, d, xi) for xi in pts.T]].T
 
 class MMCConfig(ABC):
-    @staticmethod
-    @abstractmethod
-    def get_normalization_factors(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray : ...
+    dimension: int=5
+    @classmethod
+    def get_normalization_scale(cls, topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
+        return np.ones(cls.dimension)
+    
+    @classmethod
+    def get_normalization_shift(cls, topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
+        return np.zeros(cls.dimension)
 
     @abstractmethod
     def to_angular(self) -> 'MMCAngularConfig' : ...
@@ -39,15 +44,15 @@ class MMCAngularConfig(MMCConfig):
     theta: float
 
     @staticmethod
-    def get_normalization_factors(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
-        normalization_factors = np.array([
+    def get_normalization_scale(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
+        normalization_scale = np.array([
             topology.domain_size_x, topology.domain_size_y, # (x,y)
             float('nan'), float('nan'), np.pi # (rx, ry, theta)
         ])
-        if (symmetry_x) : normalization_factors[0] /= 2.
-        if (symmetry_y) : normalization_factors[1] /= 2.
-        normalization_factors[[2,3]] = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
-        return normalization_factors
+        if (symmetry_x) : normalization_scale[0] /= 2.
+        if (symmetry_y) : normalization_scale[1] /= 2.
+        normalization_scale[[2,3]] = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
+        return normalization_scale
     
     def to_angular(self) -> 'MMCAngularConfig' : return self 
     
@@ -60,14 +65,13 @@ class MMCEndpointsConfig(MMCConfig):
     r: float
 
     @staticmethod
-    def get_normalization_factors(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
-        normalization_factors = np.array([
+    def get_normalization_scale(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
+        normalization_scale = np.array([
             topology.domain_size_x, topology.domain_size_y, # (x1, y1)
             topology.domain_size_x, topology.domain_size_y, # (x2, y2)
-            float('nan') # (r)
+            np.hypot(topology.domain_size_x, topology.domain_size_y)/2 # (r)
             ])
-        normalization_factors[-1] = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
-        return normalization_factors
+        return normalization_scale
     
     def to_angular(self) -> MMCAngularConfig :
         p1 = np.array([self.x1, self.y1])
@@ -90,26 +94,31 @@ class MMCAxiSymmetricConfig(MMCConfig):
     x: float
     y: float
     r: float
+    dimension: ClassVar[int]= 3
 
     @staticmethod
-    def get_normalization_factors(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray :
-        normalization_factors = np.array([
+    def get_normalization_scale(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray :
+        normalization_scale = np.array([
             topology.domain_size_x, topology.domain_size_y, # (x,y, r)
             np.hypot(topology.domain_size_x, topology.domain_size_y)/2
         ])
-        if (symmetry_x) : normalization_factors[0] /= 2
-        if (symmetry_y) : normalization_factors[1] /= 2
-        return normalization_factors
+        if (symmetry_x) : normalization_scale[0] /= 2
+        if (symmetry_y) : normalization_scale[1] /= 2
+        return normalization_scale
     
     def to_angular(self) -> MMCAngularConfig:
         return MMCAngularConfig(self.x, self.y, self.r, self.r, theta=0)
 
-class MMCDeformer(ABC):
-    dimension: int
+class MMCDeformer:
+    dimension: int=1
 
-    @staticmethod
-    @abstractmethod
-    def get_normalization_factors(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray : ...
+    @classmethod
+    def get_normalization_scale(cls, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray :
+        return np.ones(cls.dimension)
+    
+    @classmethod
+    def get_normalization_shift(cls, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray :
+        return np.zeros(cls.dimension)
 
     @staticmethod
     def deform_pre_scale_x(geo: Polygon, config: MMCAngularConfig, x: np.ndarray) -> Polygon :
@@ -121,16 +130,13 @@ class MMCDeformer(ABC):
 
 class StraightBeam(MMCDeformer):
     dimension: int = 0
-    @staticmethod
-    def get_normalization_factors(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray :
-        return np.array([])
-   
+
+@dataclass
 class GuoBeam(StraightBeam):
-    dimension: int = 5
+    n_samples: int
+    dimension: ClassVar[int] = 5
 
-    def __init__(self, n_samples: int) : self.n_samples = n_samples
-
-    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
+    def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
         self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
         # we normalize r1 and r2 as it is -> 0-1 instead of rnorm
         # and b -> [-2, 2]
@@ -152,11 +158,13 @@ class GuoBeam(StraightBeam):
         
         return Polygon(np.c_[x, y]).buffer(1e-2)
 
+@dataclass
 class HarmonicDeformer(MMCDeformer):
-    dimension: int = 1
-    def __init__(self, order: int, n_samples: int) : self.order = order; self.n_samples = n_samples
+    order: int
+    n_samples: int
+    dimension: ClassVar[int]=1
 
-    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
+    def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
         self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/4
         return np.array([1.,])
 
@@ -167,11 +175,12 @@ class HarmonicDeformer(MMCDeformer):
         
         return Polygon(np.c_[x, y]).buffer(1e-2)
     
+@dataclass
 class CosineDeformer(MMCDeformer):
-    dimension: int = 1
-    def __init__(self, n_samples: int) : self.n_samples = n_samples
+    n_samples: int
+    dimension: ClassVar[int] = 1
 
-    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
+    def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
         self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/4
         return np.array([1.,])
 
@@ -182,11 +191,12 @@ class CosineDeformer(MMCDeformer):
         
         return Polygon(np.c_[x, y]).buffer(1e-2)
     
+@dataclass
 class QuadraticBezierDeformer(MMCDeformer):
-    dimension: int=2
-    def __init__(self, n_samples: int) : self.n_samples = n_samples
+    n_samples: int
+    dimension: ClassVar[int] = 2
 
-    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
+    def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
         self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/4
         return np.array([1., 1.])
     
@@ -209,9 +219,7 @@ class QuadraticBezierDeformer(MMCDeformer):
         return Polygon(np.c_[x, y]).buffer(1e-2)
     
 class Infill(MMCDeformer):
-    dimension: int = 1
-    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
-        return np.array([1.])
+    dimension: ClassVar[int] = 1
     
     def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon:
         geo = scale(geo, 1, config.ry)
@@ -224,8 +232,11 @@ class MMCDeformerPipeline(MMCDeformer):
         self.deformers = deformers
         self.dimension = sum(d.dimension for d in self.deformers)
 
-    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
-        return np.r_[*[d.get_normalization_factors(topology, symmetry_x, symmetry_y) for d in self.deformers]]
+    def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
+        return np.r_[*[d.get_normalization_scale(topology, symmetry_x, symmetry_y) for d in self.deformers]]
+    
+    def get_normalization_shift(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
+        return np.r_[*[d.get_normalization_shift(topology, symmetry_x, symmetry_y) for d in self.deformers]]
     
     def deform_pre_scale_x(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon :
         i = 0
@@ -236,8 +247,7 @@ class MMCDeformerPipeline(MMCDeformer):
     
     def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon :
         i = 0
-        for d in self.deformers : 
-            print(x_scaled[i:i+d.dimension])
+        for d in self.deformers :
             geo = d.deform_pre_scale_y(geo, config, x_scaled[i:i+d.dimension])
             i += d.dimension
         return geo
@@ -256,17 +266,20 @@ class MMC(Parameterization, ABC) :
     def compute_base_polygon() -> Polygon : ...
 
     def __post_init__(self):
-        # TODO : extend the boundaries or something?
-        self.normalization_factors = np.r_[
-            self.representation.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
-            self.deformer.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
+        self.normalization_scale = np.r_[
+            self.representation.get_normalization_scale(self.topology, self.symmetry_x, self.symmetry_y),
+            self.deformer.get_normalization_scale(self.topology, self.symmetry_x, self.symmetry_y),
         ]
-        self.dimension_per_mmc = len(self.normalization_factors)
+        self.normalization_shift = np.r_[
+            self.representation.get_normalization_shift(self.topology, self.symmetry_x, self.symmetry_y),
+            self.deformer.get_normalization_shift(self.topology, self.symmetry_x, self.symmetry_y),
+        ]
+        self.dimension_per_mmc = self.representation.dimension
         self.dimension = self.dimension_per_mmc * self.n_components
         self.base_polygon: Polygon = self.compute_base_polygon()
 
     def scale(self, x_configs: np.ndarray) -> np.ndarray :
-        return x_configs*self.normalization_factors
+        return x_configs*self.normalization_scale + self.normalization_shift
     
     def compute_geometry(self, x: np.ndarray) -> np.ndarray :
         x_configs = self.scale(x.reshape(-1, self.dimension_per_mmc))
