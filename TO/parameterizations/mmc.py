@@ -230,7 +230,7 @@ class MMCDeformerPipeline(MMCDeformer):
     def deform_pre_scale_x(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon :
         i = 0
         for d in self.deformers : 
-            geo = d.deform_pre_scale_x(geo, config, x[i:i+d.dimension])
+            geo = d.deform_pre_scale_x(geo, config, x_scaled[i:i+d.dimension])
             i += d.dimension
         return geo
     
