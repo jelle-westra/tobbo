@@ -124,9 +124,7 @@ class StraightBeam(MMCDeformer):
     @staticmethod
     def get_normalization_factors(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray :
         return np.array([])
-
-class InfillBeam(StraightBeam) : ...
-    
+   
 class GuoBeam(StraightBeam):
     dimension: int = 5
 
@@ -154,6 +152,96 @@ class GuoBeam(StraightBeam):
         
         return Polygon(np.c_[x, y]).buffer(1e-2)
 
+class HarmonicDeformer(MMCDeformer):
+    dimension: int = 1
+    def __init__(self, order: int, n_samples: int) : self.order = order; self.n_samples = n_samples
+
+    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
+        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/4
+        return np.array([1.,])
+
+    def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray):
+        (x, y) = sample_equidistant_pts(np.c_[geo.exterior.xy], self.n_samples).T
+
+        y += self.rnorm/config.ry*(2*x_scaled-1) * np.cos(np.pi/2*self.order*(x/config.rx) + (self.order-1)*np.pi/2)
+        
+        return Polygon(np.c_[x, y]).buffer(1e-2)
+    
+class CosineDeformer(MMCDeformer):
+    dimension: int = 1
+    def __init__(self, n_samples: int) : self.n_samples = n_samples
+
+    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
+        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/4
+        return np.array([1.,])
+
+    def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray):
+        (x, y) = sample_equidistant_pts(np.c_[geo.exterior.xy], self.n_samples).T
+
+        y += self.rnorm/config.ry*(2*x_scaled-1) * (np.cos(np.pi*(x/config.rx)) + 1)/2
+        
+        return Polygon(np.c_[x, y]).buffer(1e-2)
+    
+class QuadraticBezierDeformer(MMCDeformer):
+    dimension: int=2
+    def __init__(self, n_samples: int) : self.n_samples = n_samples
+
+    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
+        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/4
+        return np.array([1., 1.])
+    
+    def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon:
+        (x, y) = sample_equidistant_pts(np.c_[geo.exterior.xy], self.n_samples).T
+
+        # keeping the bezier curve completely in normalized space
+        P1 = (2*x_scaled - 1)
+        P0 = (-1, 0)
+        P2 = ( 1, 0)
+
+        t = np.linspace(0, 1, 100).reshape(-1, 1)
+        Q0 = (1-t)*P0 + t*P1
+        Q1 = (1-t)*P1 + t*P2
+
+        (x_bezier, y_bezier) = ((1-t)*Q0 + t*Q1).T
+
+        y += self.rnorm/config.ry * np.interp(x/config.rx, x_bezier, y_bezier)
+
+        return Polygon(np.c_[x, y]).buffer(1e-2)
+    
+class Infill(MMCDeformer):
+    dimension: int = 1
+    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
+        return np.array([1.])
+    
+    def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon:
+        geo = scale(geo, 1, config.ry)
+        geo = geo.difference(geo.buffer(-min(config.rx, config.ry)*x_scaled[0])).buffer(1e-2)
+        return scale(geo, 1, 1/config.ry)
+
+
+class MMCDeformerPipeline(MMCDeformer):
+    def __init__(self, deformers: List[MMCDeformer]) :
+        self.deformers = deformers
+        self.dimension = sum(d.dimension for d in self.deformers)
+
+    def get_normalization_factors(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
+        return np.r_[*[d.get_normalization_factors(topology, symmetry_x, symmetry_y) for d in self.deformers]]
+    
+    def deform_pre_scale_x(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon :
+        i = 0
+        for d in self.deformers : 
+            geo = d.deform_pre_scale_x(geo, config, x[i:i+d.dimension])
+            i += d.dimension
+        return geo
+    
+    def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon :
+        i = 0
+        for d in self.deformers : 
+            print(x_scaled[i:i+d.dimension])
+            geo = d.deform_pre_scale_y(geo, config, x_scaled[i:i+d.dimension])
+            i += d.dimension
+        return geo
+
 @dataclass
 class MMC(Parameterization, ABC) :
     topology: Topology 
@@ -168,6 +256,7 @@ class MMC(Parameterization, ABC) :
     def compute_base_polygon() -> Polygon : ...
 
     def __post_init__(self):
+        # TODO : extend the boundaries or something?
         self.normalization_factors = np.r_[
             self.representation.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
             self.deformer.get_normalization_factors(self.topology, self.symmetry_x, self.symmetry_y),
@@ -200,7 +289,7 @@ class MMC(Parameterization, ABC) :
                     ), config, x_deformer # pre-scale y
                 ), config # scale y
             ), # scaling
-            config.theta, use_radians=True # rotate
+            config.theta, origin=(0,0), use_radians=True # rotate
         ), config.x, config.y) # translate
     
     def scale_x(self, geo: Polygon, config: MMCAngularConfig) -> Polygon : 
