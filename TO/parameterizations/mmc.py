@@ -23,7 +23,7 @@ def sample_equidistant_pts(pts: np.ndarray, n_samples: int) -> np.ndarray :
     return np.c_[[np.interp(d_equidistant, d, xi) for xi in pts.T]].T
 
 class MMCConfig(ABC):
-    dimension: int=5
+    dimension: int = 5
     @classmethod
     def get_normalization_scale(cls, topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
         return np.ones(cls.dimension)
@@ -66,12 +66,11 @@ class MMCEndpointsConfig(MMCConfig):
 
     @staticmethod
     def get_normalization_scale(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
-        normalization_scale = np.array([
+        return np.array([
             topology.domain_size_x, topology.domain_size_y, # (x1, y1)
             topology.domain_size_x, topology.domain_size_y, # (x2, y2)
             np.hypot(topology.domain_size_x, topology.domain_size_y)/2 # (r)
-            ])
-        return normalization_scale
+        ])
     
     def to_angular(self) -> MMCAngularConfig :
         p1 = np.array([self.x1, self.y1])
@@ -86,6 +85,32 @@ class MMCCenterpointsConfig(MMCEndpointsConfig):
     def to_angular(self) -> MMCAngularConfig :
         config: MMCAngularConfig = super().to_angular()
         return replace(config, rx=config.rx + self.r)
+
+class MMCEndpointsConfigExtended(MMCEndpointsConfig):
+    @staticmethod
+    def get_normalization_scale(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
+        normalization_scale = MMCEndpointsConfig.get_normalization_scale(topology, symmetry_x, symmetry_y)
+        normalization_scale[:-1] *= 3
+        return normalization_scale
+    
+    @staticmethod
+    def get_normalization_shift(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
+        normalization_shift = MMCEndpointsConfig.get_normalization_scale(topology, symmetry_x, symmetry_y)
+        normalization_shift[-1] = 0 
+        return -normalization_shift # we shift backwards hence the minus sign
+    
+class MMCCenterpointsConfigExtended(MMCCenterpointsConfig):
+    @staticmethod
+    def get_normalization_scale(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
+        normalization_scale = MMCCenterpointsConfig.get_normalization_scale(topology, symmetry_x, symmetry_y)
+        normalization_scale[:-1] *= 3
+        return normalization_scale
+    
+    @staticmethod
+    def get_normalization_shift(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
+        normalization_shift = MMCCenterpointsConfig.get_normalization_scale(topology, symmetry_x, symmetry_y)
+        normalization_shift[-1] = 0 
+        return -normalization_shift # we shift backwards hence the minus sign
     
 @dataclass
 class MMCAxiSymmetricConfig(MMCConfig):
@@ -108,6 +133,20 @@ class MMCAxiSymmetricConfig(MMCConfig):
     
     def to_angular(self) -> MMCAngularConfig:
         return MMCAngularConfig(self.x, self.y, self.r, self.r, theta=0)
+    
+class MMCAxiSymmetricConfigExtended(MMCAxiSymmetricConfig):
+    @staticmethod
+    def get_normalization_scale(topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
+        normalization_scale = MMCAxiSymmetricConfig.get_normalization_scale(topology, symmetry_x, symmetry_y)
+        normalization_scale[:-1] *= 3
+        return normalization_scale
+    
+    @staticmethod
+    def get_normalization_shift(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
+        normalization_shift = MMCAxiSymmetricConfig.get_normalization_scale(topology, symmetry_x, symmetry_y)
+        normalization_shift[-1] = 0 
+        return -normalization_shift # we shift backwards hence the minus sign
+
 
 class MMCDeformer:
     dimension: int=1
@@ -162,7 +201,7 @@ class GuoBeam(StraightBeam):
 class HarmonicDeformer(MMCDeformer):
     order: int
     n_samples: int
-    dimension: ClassVar[int]=1
+    dimension: ClassVar[int] = 1
 
     def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
         self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/4
@@ -274,7 +313,7 @@ class MMC(Parameterization, ABC) :
             self.representation.get_normalization_shift(self.topology, self.symmetry_x, self.symmetry_y),
             self.deformer.get_normalization_shift(self.topology, self.symmetry_x, self.symmetry_y),
         ]
-        self.dimension_per_mmc = self.representation.dimension
+        self.dimension_per_mmc = len(self.normalization_scale) 
         self.dimension = self.dimension_per_mmc * self.n_components
         self.base_polygon: Polygon = self.compute_base_polygon()
 
@@ -347,7 +386,3 @@ class LameCurves(MMC):
 class Ellipses(LameCurves):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, m=2)
-
-class Circles(Ellipses):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, representation=MMCAxiSymmetricConfig)
