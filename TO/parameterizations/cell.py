@@ -13,6 +13,7 @@ from TO.topology import Topology
 unit_circle = lambda n_samples : Polygon(np.c_[np.cos(t := np.linspace(0,2*np.pi,n_samples)), np.sin(t)])
 unit_hexagon = lambda : unit_circle(7)
 unit_square = lambda : box(-1,-1,1,1)
+infill = lambda poly, fac : poly.difference(scale(poly, 1-fac, 1-fac))
 
 class GridSampler(ABC):
     @abstractmethod
@@ -105,11 +106,16 @@ class TriGrid(GridSampler):
         symmetry_x: bool, symmetry_y: bool,
         cell_size_x: float, cell_size_y: float
     ) -> Tuple[np.ndarray, np.ndarray]:
-        return RectangularGrid.compute(
+        (X, Y) = RectangularGrid.compute(
             topology, symmetry_x, symmetry_y, 
             cell_size_x/2 if (self.horizontal) else cell_size_x, 
             cell_size_y if (self.horizontal) else cell_size_y/2
         )
+        (size_x, size_y) = topology.domain_size
+        if (symmetry_x) : size_x /= 2
+        if (symmetry_y) : size_y /= 2
+        Y -= Y.max() - size_y
+        return (X, Y)
     
     def compute_cell(self, cell: Polygon, x: float, y: float, i: int, j:int) -> Polygon :
         if (self.horizontal):
