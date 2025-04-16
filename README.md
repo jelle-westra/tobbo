@@ -34,3 +34,9 @@ For now I have three different parameterizations to test the system:
 - Profile the code
 - Add environment version and packages
 - Split-up all experiments into a run.py and analysis.ipynb section
+
+- Constraints benchmarking
+- The order of constraints matter, what are going to do with this?
+- ELA
+- Can we use the ELA as warm-start procedure of the optimization process itself -> starting with a good initial population instead of random sampling one. 
+- What is the end goal here, just correlate ELA features with performance? In a real-life problem you would likely first spend some budget on ELA to select an algorithm and then to do an/some optimization run? Then we might as well use the evaluations some how in the optimizer -> easy in BO.
