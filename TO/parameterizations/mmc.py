@@ -305,6 +305,7 @@ class MMC(Parameterization, ABC) :
     def compute_base_polygon() -> Polygon : ...
 
     def __post_init__(self):
+        if (self.deformer is None) : self.deformer = StraightBeam
         self.normalization_scale = np.r_[
             self.representation.get_normalization_scale(self.topology, self.symmetry_x, self.symmetry_y),
             self.deformer.get_normalization_scale(self.topology, self.symmetry_x, self.symmetry_y),
