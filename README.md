@@ -31,9 +31,6 @@ For now I have three different parameterizations to test the system:
 # TO-DO
 - Comment the code
 - Write a proper readme
-- Profile the code
-- Add environment version and packages
-- Split-up all experiments into a run.py and analysis.ipynb section
 
 - Constraints benchmarking
 - The order of constraints matter, what are going to do with this?
