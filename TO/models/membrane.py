@@ -6,10 +6,10 @@ from dataclasses import dataclass
 from typing import Set, List, Tuple
 from itertools import product
 
-from .. import FEM
-from ..topology import Topology
+from TO.core import FEM
+from TO.core import Topology
 
-from TO.models._membrane_cython import fill_C_matrix as fill_C_matrix_c
+from ._membrane_cython import fill_C_matrix as fill_C_matrix_c
 
 class RigidEdge(FEM.LinearSystemBoundaryCondition) :
     def __init__(self, nodes: np.ndarray, state: FEM.LinearSystem) :

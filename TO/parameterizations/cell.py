@@ -7,8 +7,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, replace
 from typing import Tuple
 
-from TO.parameterization import Parameterization
-from TO.topology import Topology
+from TO.core import Parameterization, Topology
 
 unit_circle = lambda n_samples : Polygon(np.c_[np.cos(t := np.linspace(0,2*np.pi,n_samples)), np.sin(t)])
 unit_hexagon = lambda : unit_circle(7)

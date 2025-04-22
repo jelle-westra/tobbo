@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 from abc import ABC, abstractmethod
 from typing import List, ClassVar
 
-from TO import Parameterization, Topology
+from TO.core import Parameterization, Topology
 
 __all__ = [
     'MMCConfig', 'MMCAngularConfig', 'MMCEndpointsConfig', 'MMCCenterpointsConfig', 'MMCAxiSymmetricConfig', 'MMC'

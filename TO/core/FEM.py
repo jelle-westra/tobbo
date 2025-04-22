@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from itertools import product
 from typing import List, Set, Tuple
 
-
 class QuadElement:
     # a 2D quad element
     NODE_DOF: int = 2

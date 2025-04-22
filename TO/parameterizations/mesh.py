@@ -1,7 +1,3 @@
-from TO.parameterization import Parameterization
-from TO.topology import Topology
-from TO.parameterizations.mmc import MMC, MMCCenterpointsConfig, StraightBeam
-
 import numpy as np
 from scipy import spatial
 from shapely.geometry import MultiPolygon, LineString, box
@@ -11,6 +7,8 @@ from dataclasses import dataclass
 from itertools import combinations
 from typing import List
 
+from TO.core import Parameterization, Topology
+from .mmc import MMC, MMCCenterpointsConfig, StraightBeam
 
 def get_voronoi_line_segments(mesh: spatial.Voronoi) -> List[np.ndarray]:
     assert ((0 < mesh.points) & (mesh.points < 1)).all(), 'assuming points are normalized; i.e. all points in unit square [0,1]^2'

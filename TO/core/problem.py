@@ -1,21 +1,20 @@
 import numpy as np
-from scipy.sparse.csgraph import minimum_spanning_tree
-from shapely.geometry.base import BaseGeometry
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+from scipy.sparse.csgraph import minimum_spanning_tree
+from shapely.geometry.base import BaseGeometry
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from functools import partial
+import os
 from time import time
 from typing import List, Set
-import os
-from functools import partial
-from abc import ABC, abstractmethod
 
 import ioh
 from ioh.iohcpp import RealConstraint
 from ioh import ConstraintEnforcement
 
-from .models import BinaryElasticMembraneModel
 from .parameterization import Parameterization
 from .topology import Topology
 
@@ -60,12 +59,16 @@ class DisconnectionConstraint(Constraint):
             if (distance_to_boundary := topology.geometry.distance(boundary)) > 1/2 : 
                 d += distance_to_boundary
         return d
+    
+class Model(ABC):
+    @abstractmethod
+    def update(self, topology: Topology) : ...
 
 @dataclass
 class ProblemInstance(ioh.problem.RealSingleObjective):
     topology: Topology
     parameterization: Parameterization
-    model: BinaryElasticMembraneModel
+    model: Model # TODO : implement some TO.core.model base class, and objective
     topology_constraints: List[Constraint]
     # objective: Objective
 

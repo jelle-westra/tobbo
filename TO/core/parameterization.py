@@ -3,8 +3,8 @@ from shapely.geometry import MultiPolygon, Polygon, GeometryCollection
 from shapely.affinity import scale
 from rasterio.features import rasterize, shapes
 
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 from .topology import Topology
 

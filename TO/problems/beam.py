@@ -1,5 +1,4 @@
-from TO import Parameterization, Topology, ProblemInstance
-from TO.problem import VolumeConstraint, DisconnectionConstraint, ConstraintEnforcement
+from TO.core import Parameterization, Topology, ProblemInstance, VolumeConstraint, DisconnectionConstraint, ConstraintEnforcement
 from TO.models.membrane import BinaryElasticMembraneModel, RigidEdge, Load
 
 from shapely.geometry import Point, LineString

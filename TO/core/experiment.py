@@ -1,6 +1,3 @@
-from .topology import Topology
-from .parameterization import Parameterization
-from .models import BinaryElasticMembraneModel
 from .problem import ProblemInstance
 
 import numpy as np
