@@ -1,4 +1,4 @@
-name: TOclean
+name: TO
 channels:
   - conda-forge
   - defaults
