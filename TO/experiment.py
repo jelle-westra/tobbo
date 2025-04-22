@@ -17,7 +17,6 @@ def run_experiment(
     name: str
 ) -> None :
     triggers = [
-        ioh.logger.trigger.Each(1),
         ioh.logger.trigger.OnImprovement()
     ]
 
