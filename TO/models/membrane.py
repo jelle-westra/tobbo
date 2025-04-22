@@ -6,8 +6,7 @@ from dataclasses import dataclass
 from typing import Set, List, Tuple
 from itertools import product
 
-from TO.core import FEM
-from TO.core import Topology
+from TO.core import Topology, FEM, Model
 
 from ._membrane_cython import fill_C_matrix as fill_C_matrix_c
 
@@ -36,7 +35,7 @@ class Load(FEM.LinearSystemBoundaryCondition) :
         state.f[FEM.QuadElement.NODE_DOF * self.nodes + 1] = self.loads[:,1]
 
 
-class BinaryElasticMembraneModel():
+class BinaryElasticMembraneModel(Model):
     def __init__(self, 
         topology: Topology,
         thickness: float,
