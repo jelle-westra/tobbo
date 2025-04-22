@@ -4,7 +4,7 @@ from shapely.affinity import rotate, scale, translate
 from shapely import unary_union
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Tuple
 
 from TO.parameterization import Parameterization
@@ -13,6 +13,7 @@ from TO.topology import Topology
 unit_circle = lambda n_samples : Polygon(np.c_[np.cos(t := np.linspace(0,2*np.pi,n_samples)), np.sin(t)])
 unit_hexagon = lambda : unit_circle(7)
 unit_square = lambda : box(-1,-1,1,1)
+unit_triangle = lambda : Polygon([(-1,-1), (1,-1), (0,1)])
 infill = lambda poly, fac : poly.difference(scale(poly, 1-fac, 1-fac))
 
 class GridSampler(ABC):
@@ -106,15 +107,19 @@ class TriGrid(GridSampler):
         symmetry_x: bool, symmetry_y: bool,
         cell_size_x: float, cell_size_y: float
     ) -> Tuple[np.ndarray, np.ndarray]:
+        topology_extended = replace(topology, domain=box(0, 0, 
+            topology.domain_size_x + (cell_size_x/2 if self.horizontal else 0), 
+            topology.domain_size_y + (cell_size_y/2 if not(self.horizontal) else 0)
+        ))
         (X, Y) = RectangularGrid.compute(
-            topology, symmetry_x, symmetry_y, 
+            topology_extended, symmetry_x, symmetry_y, 
             cell_size_x/2 if (self.horizontal) else cell_size_x, 
             cell_size_y if (self.horizontal) else cell_size_y/2
         )
         (size_x, size_y) = topology.domain_size
         if (symmetry_x) : size_x /= 2
         if (symmetry_y) : size_y /= 2
-        Y -= Y.max() - size_y
+        if not(self.horizontal) : Y -= Y.max() - size_y
         return (X, Y)
     
     def compute_cell(self, cell: Polygon, x: float, y: float, i: int, j:int) -> Polygon :
