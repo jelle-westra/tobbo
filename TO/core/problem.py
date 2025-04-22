@@ -5,6 +5,7 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 from shapely.geometry.base import BaseGeometry
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
 import os
@@ -17,18 +18,15 @@ from ioh.iohcpp import RealConstraint
 from .constraint import Constraint
 from .parameterization import Parameterization
 from .topology import Topology
-    
-class Model(ABC):
-    @abstractmethod
-    def update(self, topology: Topology) : ...
+from .model import Model
 
 @dataclass
 class ProblemInstance(ioh.problem.RealSingleObjective):
     topology: Topology
     parameterization: Parameterization
-    model: Model # TODO : implement some TO.core.model base class, and objective
+    model: Model
     topology_constraints: List[Constraint]
-    # objective: callable[]
+    objective: Callable[[Model], float]
 
     def __post_init__(self) -> None :
         self.x = float('nan')*np.ones(self.parameterization.dimension)
@@ -84,7 +82,8 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
 
         # we pass the new topology corresponding to`x` to the simulation
         self.model.update(self.topology)
-        self.score = self.model.compute_element_compliance().sum()
+        # self.score = self.model.compute_element_compliance().sum()
+        self.score = self.objective(self.model)
         
         if (self.score < self.score_best) : (self.x_best, self.score_best) = (self.x.copy(), self.score)
         (self.configs[self.count-1], self.scores[self.count-1]) = (x, self.score)

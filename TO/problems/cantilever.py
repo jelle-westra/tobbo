@@ -24,4 +24,5 @@ def create_horizontal_cantilever_problem(topology: Topology, parameterization: P
             ]
         )
     ]
-    return ProblemInstance(topology, parameterization, model, topology_constraints)
+    objective = lambda model : model.compute_element_compliance().sum()
+    return ProblemInstance(topology, parameterization, model, topology_constraints, objective)
