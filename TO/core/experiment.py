@@ -9,7 +9,6 @@ import os
 def run_experiment(
     problem: ProblemInstance,
     budget: int,
-    sigma0: float,
     seed: int,
     name: str
 ) -> None :
@@ -34,8 +33,15 @@ def run_experiment(
         ]
     )
 
-    np.random.seed(seed)
-    x0 = np.random.rand(problem.parameterization.dimension)
+    def gen_x0() -> np.ndarray :
+        nonlocal seed, problem
+        np.random.seed(seed)
+        # the cma will update it's random seed by one after a restart, to 
+        # keep unique runs we increment the x0 seed by 1000, assuming less than 1000 experiments are performed
+        seed += 1000 
+        print('generating new x0...')
+        print(f'budget={problem.budget-problem.count}')
+        return np.random.rand(problem.parameterization.dimension)
 
     assert (seed != 0), 'If the seed is 0, cma will generate a seed by itself which will make the experiment not reporducible.'
     opts:cma.CMAOptions = {'bounds':[0,1],'tolfun':1e-6,'seed':seed,'verb_filenameprefix':os.path.join(logger.output_directory,'outcmaes/')}
@@ -44,8 +50,8 @@ def run_experiment(
     problem.attach_logger(logger)
     problem.logger_output_directory = logger.output_directory
 
-    try:
-        cma.fmin2(problem, x0, sigma0, restarts=0, bipop=True, options=opts)
+    try: # assuming we exhaust the budget before 100 restarts
+        cma.fmin2(problem, gen_x0, 0.25, restarts=100, bipop=True, options=opts)
     except KeyboardInterrupt :
         pass
 
