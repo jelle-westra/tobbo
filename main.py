@@ -11,7 +11,7 @@ from TO.core import Topology, ProblemInstance, run_experiment
 from TO.parameterizations.mmc import Capsules, MMCCenterpointsConfig
 from TO.problems.cantilever import create_horizontal_cantilever_problem
 
-COMPONENTS = 4
+COMPONENTS = 10
 
 MIN_PER_EVAL: float = 2/500 # approximate [min/evaluations]
 
