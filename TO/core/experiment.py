@@ -61,7 +61,7 @@ def run_experiment(
     problem.logger_output_directory = logger.output_directory
 
     try: # assuming we exhaust the budget before 100 restarts
-        cma.fmin2(problem, gen_x0, 0.25, restarts=100, bipop=True, options=opts)
+        cma.fmin2(problem, gen_x0, 0.25, restarts=3, bipop=True, options=opts)
     except KeyboardInterrupt :
         pass
 
