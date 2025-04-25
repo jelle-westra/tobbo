@@ -2,6 +2,7 @@ import numpy as np
 
 import os
 import subprocess
+from glob import glob
 from IPython.display import display, Markdown
 from typing import List
 
@@ -29,8 +30,12 @@ def check_package_status(notebook: bool=True):
                 '</div>'
             ))
     else:
-        if (file_changes or untracked_files) : 
+        if (file_changes or untracked_files) :
             raise AssertionError('Changes found in the ./TO package, first commit changes before starting experiments.')
+        if (version_files := glob('*.version')) :
+            assert len(version_files) > 1, 'Can not continue w/ multiple version files; only a sinlge version can be attributed to an experiment.'
+            if (version_files[0].split('.') != version) : 
+                raise AssertionError('Current version is different from previously run instances of the experiment.')
     with open(f'{version}.version', 'w') as _ : ...
     return True          
 
