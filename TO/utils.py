@@ -33,9 +33,9 @@ def check_package_status(notebook: bool=True):
         if (file_changes or untracked_files) :
             raise AssertionError('Changes found in the ./TO package, first commit changes before starting experiments.')
         if (version_files := glob('*.version')) :
-            assert len(version_files) > 1, 'Can not continue w/ multiple version files; only a sinlge version can be attributed to an experiment.'
-            if (version_files[0].split('.') != version) : 
-                raise AssertionError('Current version is different from previously run instances of the experiment.')
+            assert (len(version_files) == 1), 'Can not continue w/ multiple version files; only a sinlge version can be attributed to an experiment.'
+            if ((version_prev := version_files[0].split('.')[0]) != version) : 
+                raise AssertionError(f'Current version ({version}) is different from previously run instances of the experiment ({version_prev}).')
     with open(f'{version}.version', 'w') as _ : ...
     return True          
 
