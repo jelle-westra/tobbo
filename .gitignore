@@ -4,7 +4,6 @@ results*/
 *.pkl
 
 /notepad.ipynb
-run.py
 
 TO/build
 TO/models/*.c
