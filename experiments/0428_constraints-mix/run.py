@@ -82,7 +82,7 @@ def construct_problem(weight_volume:float, weight_disconnection:float, use_MST:b
         )
     ]
     objective = lambda model : model.compute_element_compliance().sum()
-    return ProblemInstance(topology, parameterization, model, ConstraintMix(1, ConstraintEnforcement.HARD, topology_constraints), objective)
+    return ProblemInstance(topology, parameterization, model, [ConstraintMix(1, ConstraintEnforcement.HARD, topology_constraints)], objective)
 
 
 def constructor_1e3_1e3_MST() : return construct_problem(1e3, 1e3, True)
@@ -90,7 +90,7 @@ def constructor_1e6_1e3_MST() : return construct_problem(1e6, 1e3, True)
 def constructor_1e3_1e6_MST() : return construct_problem(1e3, 1e6, True)
 
 def constructor_1e3_1e3_NoMST() : return construct_problem(1e3, 1e3, False)
-def constructor_1e6_1e3_NoMST() : return construct_problem(1e6, 1e3, False)
+def constructor_1e6_1e3_NoMST() : return construct_problem(1e6, 1e3, False) 
 def constructor_1e3_1e6_NoMST() : return construct_problem(1e3, 1e6, False)
 
 experiments = {
