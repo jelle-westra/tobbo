@@ -51,3 +51,10 @@ class DisconnectionConstraint(Constraint):
             if (distance_to_boundary := topology.geometry.distance(boundary)) > 1/2 : 
                 d += distance_to_boundary
         return d
+    
+@dataclass
+class ConstraintMix(Constraint):
+    constraints: List[Constraint]
+
+    def compute(self, topology: Topology): 
+        return sum(c.weight*c.compute(topology) for c in self.constraints)
