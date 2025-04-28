@@ -18,7 +18,7 @@ from typing import List
 
 def construct_problem(n_components: int) -> ProblemInstance :
     topology = Topology(True, box(0,0,100,50), 1.0)
-    parameterization = Capsules(topology, False, True, n_components, MMCCenterpointsConfig, GuoBeam, 1_000)
+    parameterization = Capsules(topology, False, True, n_components, MMCCenterpointsConfig, GuoBeam(1_000), 1_000)
     return create_horizontal_cantilever_problem(topology, parameterization)
 
 def constructor_1mmcs() : return construct_problem(1) # 10D
