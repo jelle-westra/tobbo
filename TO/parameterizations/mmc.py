@@ -204,7 +204,7 @@ class HarmonicDeformer(MMCDeformer):
     dimension: ClassVar[int] = 1
 
     def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
-        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/4
+        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
         return np.array([1.,])
 
     def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray):
@@ -220,7 +220,7 @@ class CosineDeformer(MMCDeformer):
     dimension: ClassVar[int] = 1
 
     def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) :
-        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/4
+        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
         return np.array([1.,])
 
     def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray):
@@ -236,7 +236,7 @@ class QuadraticBezierDeformer(MMCDeformer):
     dimension: ClassVar[int] = 2
 
     def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
-        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/4
+        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
         return np.array([1., 1.])
     
     def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon:
@@ -252,6 +252,37 @@ class QuadraticBezierDeformer(MMCDeformer):
         Q1 = (1-t)*P1 + t*P2
 
         (x_bezier, y_bezier) = ((1-t)*Q0 + t*Q1).T
+
+        y += self.rnorm/config.ry * np.interp(x/config.rx, x_bezier, y_bezier)
+
+        return Polygon(np.c_[x, y]).buffer(1e-2)
+    
+@dataclass
+class CubicBezierDeformer(MMCDeformer):
+    n_samples: int
+    dimension: ClassVar[int] = 4
+
+    def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
+        self.rnorm = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
+        return np.array([1., 1., 1., 1.])
+    
+    def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon:
+        (x, y) = sample_equidistant_pts(np.c_[geo.exterior.xy], self.n_samples).T
+
+        # keeping the bezier curve completely in normalized space
+        (P1, P2) = (2*x_scaled.reshape(2,2) - 1)
+        P0 = (-1, 0)
+        P3 = ( 1, 0)
+
+        t = np.linspace(0, 1, 100).reshape(-1, 1)
+        Q0 = (1-t)*P0 + t*P1
+        Q1 = (1-t)*P1 + t*P2
+        Q2 = (1-t)*P2 + t*P3
+
+        R0 = (1-t)*Q0 + t*Q1
+        R1 = (1-t)*Q1 + t*Q2
+
+        (x_bezier, y_bezier) = ((1-t)*R0 + t*R1).T
 
         y += self.rnorm/config.ry * np.interp(x/config.rx, x_bezier, y_bezier)
 
