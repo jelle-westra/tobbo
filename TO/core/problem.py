@@ -59,8 +59,8 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
 
     def set_budget(self, budget) : 
         self.budget = budget
-        self.configs = np.nan*np.ones((self.budget, self.parameterization.dimension))
-        self.scores = np.nan*np.ones(self.budget)
+        # self.configs = np.nan*np.ones((self.budget, self.parameterization.dimension))
+        # self.scores = np.nan*np.ones(self.budget)
 
     def update(self, x:np.ndarray) -> None :
         # updating the topology geomtery and material mask
@@ -85,12 +85,12 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         # self.score = self.model.compute_element_compliance().sum()
         self.score = self.objective(self.model)
         
-        if (self.score < self.score_best) : (self.x_best, self.score_best) = (self.x.copy(), self.score)
-        (self.configs[self.count-1], self.scores[self.count-1]) = (x, self.score)
-        with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
-            # TODO : reintroduce the constraint values in the evals.txt just to be sure, just use constraint.response
-            handle.write(f'{self.count} {self.score} ') #{response_vol_original:.6f}\n')
-            handle.write(' '.join(map(str, x)) + '\n')
+        if (self.score < self.score_best) : 
+            (self.x_best, self.score_best) = (self.x.copy(), self.score)
+            with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
+                # TODO : reintroduce the constraint values in the evals.txt just to be sure, just use constraint.response
+                handle.write(f'{self.count} {self.score} ') #{response_vol_original:.6f}\n')
+                handle.write(' '.join(map(str, x)) + '\n')
         # TODO : let's first check if the mesh is connected before evluating, sometimes it can generates negative values for the HORIZONTAL loading problem
         return abs(self.score)
     
