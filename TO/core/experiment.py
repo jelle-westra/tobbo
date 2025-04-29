@@ -103,8 +103,8 @@ def run_experiment_parallel(problem_constructor: Callable[[],ProblemInstance], b
     args = [(seed, problem_constructor, budget, name) for seed in seeds]
     del problem
 
-    progress_thread = Thread(target=_run_progress_checker, args=(seeds, budget, name), daemon=True)
-    progress_thread.start()
+    # progress_thread = Thread(target=_run_progress_checker, args=(seeds, budget, name), daemon=True)
+    # progress_thread.start()
     
     with multiprocessing.Pool(processes=threads) as pool:
         for _ in pool.imap_unordered(_run_instance, args) : ...

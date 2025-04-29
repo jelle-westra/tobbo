@@ -39,7 +39,7 @@ class Parameterization(ABC) :
         geo = self.compute_geometry(x).intersection(topology.domain)
         if (self.symmetry_x) : geo = geo.union(scale(geo, -1, 1, origin=(topology.domain_size_x/2,0)))
         if (self.symmetry_y) : geo = geo.union(scale(geo, 1, -1, origin=(0,topology.domain_size_y/2)))
-        # baby-sitting shapely's dynamic typing
+        # checking shapely's dynamic typing
         if isinstance(geo, GeometryCollection) : 
             topology.geometry = MultiPolygon([obj for obj in geo.geoms if isinstance(obj, Polygon)])
         else:
