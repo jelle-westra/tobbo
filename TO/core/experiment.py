@@ -70,9 +70,13 @@ def run_experiment(
 
 def _run_instance(args):
     (seed, problem_constructor, budget, name) = args
-    problem: ProblemInstance = problem_constructor()
-    with open(os.devnull, 'w') as fnull, redirect_stdout(fnull):
-        run_experiment(problem, budget, seed, name)
+    try:
+        problem: ProblemInstance = problem_constructor()
+        with open(os.devnull, 'w') as fnull, redirect_stdout(fnull):
+            return run_experiment(problem, budget, seed, name)
+    except Exception as e:
+        print(f'Exception in worker {seed}: {e}')
+        return None
 
 def _run_progress_checker(seeds: List[int], budget: int, name: str):
     path = lambda seed : f'results/{name}/{seed}/evals.dat'
