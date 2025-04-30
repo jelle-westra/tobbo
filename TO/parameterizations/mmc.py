@@ -295,6 +295,25 @@ class Infill(MMCDeformer):
         geo = scale(geo, 1, config.ry)
         geo = geo.difference(geo.buffer(-min(config.rx, config.ry)*x_scaled[0])).buffer(1e-2)
         return scale(geo, 1, 1/config.ry)
+    
+@dataclass
+class LinearHeightInterpolation(MMCDeformer):
+    n_samples: int
+    dimension: ClassVar[int] = 1
+
+    def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
+        return np.array([np.hypot(topology.domain_size_x, topology.domain_size_y)/2])
+    
+    def deform_pre_scale_y(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon:
+        (x, y) = sample_equidistant_pts(np.c_[geo.exterior.xy], self.n_samples).T
+        (r_left, r_right) = (config.ry, x_scaled[0])
+        ry_ratio = (r_right/r_left)
+
+        t = (x/x.max() + 1)/2
+        ry = (1-t)*1 + t*ry_ratio
+        y = y*ry
+
+        return Polygon(np.c_[x, y]).buffer(1e-2)
 
 
 class MMCDeformerPipeline(MMCDeformer):
