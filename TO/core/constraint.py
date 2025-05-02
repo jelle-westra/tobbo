@@ -6,14 +6,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List
 
-from ioh import ConstraintEnforcement
-
 from .topology import Topology
 
 @dataclass
 class Constraint(ABC):
     weight: float
-    enforcement: ConstraintEnforcement
 
     @abstractmethod
     def compute(self, topology: Topology) -> float : ...

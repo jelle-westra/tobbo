@@ -1,4 +1,4 @@
-from TO.core import Parameterization, Topology, ProblemInstance, VolumeConstraint, DisconnectionConstraint, ConstraintEnforcement, ConstraintMix
+from TO.core import Parameterization, Topology, ProblemInstance, VolumeConstraint, DisconnectionConstraint, ConstraintMix
 from TO.models.membrane import BinaryElasticMembraneModel, RigidEdge, Load
 
 from shapely.geometry import Point, LineString
@@ -15,15 +15,17 @@ def create_horizontal_cantilever_problem(topology: Topology, parameterization: P
     )
     topology_constraints = [
         VolumeConstraint(
-            weight=1e3, enforcement=ConstraintEnforcement.HARD, max_relative_volume=0.5
+            weight=1e3, 
+            max_relative_volume=0.5
         ),
         DisconnectionConstraint(
-            weight=1e3, enforcement=ConstraintEnforcement.HARD, boundaries=[
+            weight=1e3, 
+            boundaries=[
                 Point(topology.domain_size_x, topology.domain_size_y/2), # the loading point
                 LineString([(0,0), (0,topology.domain_size_y)]) # the wall
             ]
         )
     ]
-    constraint_mixer = ConstraintMix(1, ConstraintEnforcement.HARD, topology_constraints)
+    constraint_mixer = ConstraintMix(1, topology_constraints)
     objective = lambda model : model.compute_element_compliance().sum()
     return ProblemInstance(topology, parameterization, model, [constraint_mixer], objective)
