@@ -12,16 +12,13 @@ import os
 from time import time
 from typing import List
 
-import ioh
-from ioh.iohcpp import RealConstraint
-
 from .constraint import Constraint
 from .parameterization import Parameterization
 from .topology import Topology
 from .model import Model
 
 @dataclass
-class ProblemInstance(ioh.problem.RealSingleObjective):
+class ProblemInstance:
     topology: Topology
     parameterization: Parameterization
     model: Model
@@ -37,30 +34,8 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
         self.start_time = time()
         self.budget = float('inf')
 
-        bounds = ioh.iohcpp.RealBounds(self.parameterization.dimension, 0.0, 1.0)
-        optimum = ioh.iohcpp.RealSolution([0]*self.parameterization.dimension, 0.0)
-
-        super().__init__(
-            name='TopologyOptimization',
-            n_variables=self.parameterization.dimension,
-            instance=0,
-            is_minimization=True,
-            bounds= bounds,
-            optimum=optimum
-        )
-        for constraint in self.topology_constraints:
-            super().add_constraint(RealConstraint(
-                partial(self.compute_constraint, constraint),
-                name=str(constraint),
-                enforced=constraint.enforcement,
-                weight = constraint.weight, 
-                exponent=1.0
-            ))
-
     def set_budget(self, budget) : 
         self.budget = budget
-        # self.configs = np.nan*np.ones((self.budget, self.parameterization.dimension))
-        # self.scores = np.nan*np.ones(self.budget)
 
     def update(self, x:np.ndarray) -> None :
         # updating the topology geomtery and material mask
@@ -68,6 +43,13 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
             self.parameterization.update_topology(self.topology, x)
             self.score = float('nan')
             self.x = x
+
+    def __call__(self, x: np.ndarray):
+        self.update(x)
+        for constraint in self.topology_constraints:
+            constraint.response = constraint.compute(self.topology)
+            if constraint.response : return constraint.response
+        return self.evaluate(x)
 
     def compute_constraint(self, constraint: Constraint, x: np.ndarray) :
         self.update(x) # updating the topology first if x has changed
@@ -82,16 +64,15 @@ class ProblemInstance(ioh.problem.RealSingleObjective):
 
         # we pass the new topology corresponding to`x` to the simulation
         self.model.update(self.topology)
-        # self.score = self.model.compute_element_compliance().sum()
         self.score = self.objective(self.model)
         
-        if (self.score < self.score_best) : 
-            (self.x_best, self.score_best) = (self.x.copy(), self.score)
+        if (self.score < self.score_best) or not(self.count%100): 
             with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
                 # TODO : reintroduce the constraint values in the evals.txt just to be sure, just use constraint.response
-                handle.write(f'{self.count} {self.score} ') #{response_vol_original:.6f}\n')
+                handle.write(f'{self.count} {self.score} ')
                 handle.write(' '.join(map(str, x)) + '\n')
-        # TODO : let's first check if the mesh is connected before evluating, sometimes it can generates negative values for the HORIZONTAL loading problem
+            if (self.score < self.score_best) : 
+                (self.x_best, self.score_best) = (self.x.copy(), self.score)
         return abs(self.score)
     
     def plot_best(self, ax: Axes=None) :
