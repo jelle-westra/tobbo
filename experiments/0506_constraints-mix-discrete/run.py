@@ -19,9 +19,9 @@ def constructor_5D_discrete () : return construct_problem(n_components=1, contin
 def constructor_10D_discrete() : return construct_problem(n_components=2, continuous=False)
 def constructor_15D_discrete() : return construct_problem(n_components=3, continuous=False)
 
-def constructor_5D_continuous () : return construct_problem(n_components=1, continuous=False)
-def constructor_10D_continuous() : return construct_problem(n_components=2, continuous=False)
-def constructor_15D_continuous() : return construct_problem(n_components=3, continuous=False)
+def constructor_5D_continuous () : return construct_problem(n_components=1, continuous=True)
+def constructor_10D_continuous() : return construct_problem(n_components=2, continuous=True)
+def constructor_15D_continuous() : return construct_problem(n_components=3, continuous=True)
 
 experiments = {
     '5D-discrete': constructor_5D_discrete,
