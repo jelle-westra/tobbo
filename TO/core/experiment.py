@@ -21,7 +21,7 @@ def run_experiment(
         nonlocal seed, problem
         np.random.seed(seed)
         seed += 1000
-        return np.random.rand(problem.parameterization.dimension)
+        return problem.parameterization.gen_x0()
 
     assert (seed != 0), 'If the seed is 0, cma will generate a seed by itself which will make the experiment not reproducible.'
     opts: cma.CMAOptions = {'bounds': [0, 1], 'tolfun': 1e-6, 'seed': seed, 'verb_log': 0}
