@@ -3,6 +3,7 @@
 results*/
 *.pkl
 *.version
+*.out
 
 /notepad.ipynb
 
