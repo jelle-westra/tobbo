@@ -2,6 +2,7 @@
 *.DS_STORE
 results*/
 *.pkl
+*.version
 
 /notepad.ipynb
 
