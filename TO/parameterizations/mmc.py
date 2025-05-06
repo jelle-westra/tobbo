@@ -39,19 +39,19 @@ class MMCConfig(ABC):
 class MMCAngularConfig(MMCConfig):
     x: float
     y: float
+    theta: float
     rx: float
     ry: float
-    theta: float
 
     @staticmethod
     def get_normalization_scale(topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
         normalization_scale = np.array([
             topology.domain_size_x, topology.domain_size_y, # (x,y)
-            float('nan'), float('nan'), np.pi # (rx, ry, theta)
+            np.pi, float('nan'), float('nan') # (theta, rx, ry)
         ])
         if (symmetry_x) : normalization_scale[0] /= 2.
         if (symmetry_y) : normalization_scale[1] /= 2.
-        normalization_scale[[2,3]] = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
+        normalization_scale[[3,4]] = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
         return normalization_scale
     
     def to_angular(self) -> 'MMCAngularConfig' : return self 
@@ -79,7 +79,7 @@ class MMCEndpointsConfig(MMCConfig):
         theta = np.arctan2(self.y1 - self.y2, self.x1 - self.x2)
         if (theta < 0) : theta += np.pi
 
-        return MMCAngularConfig(*(p1 + p2)/2, *(np.linalg.norm(p1 - p2)/2, self.r), theta)
+        return MMCAngularConfig(*(p1 + p2)/2, theta, *(np.linalg.norm(p1 - p2)/2, self.r))
     
 class MMCCenterpointsConfig(MMCEndpointsConfig):
     def to_angular(self) -> MMCAngularConfig :
@@ -132,7 +132,7 @@ class MMCAxiSymmetricConfig(MMCConfig):
         return normalization_scale
     
     def to_angular(self) -> MMCAngularConfig:
-        return MMCAngularConfig(self.x, self.y, self.r, self.r, theta=0)
+        return MMCAngularConfig(self.x, self.y, 0., self.r, self.r)
     
 class MMCAxiSymmetricConfigExtended(MMCAxiSymmetricConfig):
     @staticmethod
