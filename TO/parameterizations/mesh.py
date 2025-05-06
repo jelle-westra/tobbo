@@ -48,7 +48,10 @@ class Voronoi(Parameterization):
 
     def __post_init__(self):
         self.mmc = self.mmc_cls(self.topology, False, False, 1, MMCCenterpointsConfig, StraightBeam, 100)
-        self.dimension = 2*self.n_points
+        self._dimension = 2*self.n_points
+
+    @property
+    def dimension(self) -> int : return self._dimension
 
     def compute_geometry(self, x: np.ndarray) -> MultiPolygon :
         x_pts = x.reshape(self.n_points, 2)
@@ -68,6 +71,9 @@ class Delaunay(Parameterization):
         self.mmc = self.mmc_cls(self.topology, False, False, 1, MMCCenterpointsConfig, StraightBeam, 100)
         self.max_n_edges = 3*self.n_points - 6
         self.dimension = 2*self.n_points + self.max_n_edges
+
+    @property
+    def dimension(self) -> int : return self._dimension
     
     def compute_geometry(self, x: np.ndarray) -> MultiPolygon :
         x_pts = x[:2*self.n_points].reshape(-1, 2)

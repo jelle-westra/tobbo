@@ -24,6 +24,7 @@ def sample_equidistant_pts(pts: np.ndarray, n_samples: int) -> np.ndarray :
 
 class MMCConfig(ABC):
     dimension: int = 5
+
     @classmethod
     def get_normalization_scale(cls, topology: Topology, symmetry_x, symmetry_y) -> np.ndarray :
         return np.ones(cls.dimension)
@@ -365,8 +366,11 @@ class MMC(Parameterization, ABC) :
             self.deformer.get_normalization_shift(self.topology, self.symmetry_x, self.symmetry_y),
         ]
         self.dimension_per_mmc = len(self.normalization_scale) 
-        self.dimension = self.dimension_per_mmc * self.n_components
+        self._dimension = self.dimension_per_mmc * self.n_components
         self.base_polygon: Polygon = self.compute_base_polygon()
+
+    @property
+    def dimension(self) -> int : return self._dimension
 
     def scale(self, x_configs: np.ndarray) -> np.ndarray :
         return x_configs*self.normalization_scale + self.normalization_shift

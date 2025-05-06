@@ -17,6 +17,13 @@ class Parameterization(ABC) :
     @abstractmethod
     def compute_geometry(self, x: np.ndarray) -> MultiPolygon : ...
 
+    @property
+    @abstractmethod
+    def dimension(self) -> int : ...
+
+    def gen_x0(self) -> np.ndarray :
+        return np.random.rand(self.dimension)
+
     @staticmethod
     def compute_geometry_from_image(mask: np.ndarray) -> MultiPolygon :
         polygons = [

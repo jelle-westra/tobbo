@@ -139,11 +139,14 @@ class Cells(Parameterization, ABC):
     def __post_init__(self):
         self.cell: Polygon = scale(self.unit_cell, self.cell_size_x/2, self.cell_size_y/2)
         (self.X, self.Y) = self.sampler.compute(self.topology, self.symmetry_x, self.symmetry_y, self.cell_size_x, self.cell_size_y)
-        self.dimension = self.X.size
+        self._dimension = self.X.size
         # calculate the geo of the tiling
         self.cells: np.ndarray[Polygon] = np.array([
             self.sampler.compute_cell(self.cell, self.X[i,j], self.Y[i,j], i, j) for i in range(len(self.X)) for j in range(len(self.X[0]))
         ])
+
+    @property
+    def dimension(self) -> int : return self._dimension
 
     @abstractmethod
     def compute_geometry(self, x: np.ndarray) -> MultiPolygon: ...
