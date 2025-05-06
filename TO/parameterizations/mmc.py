@@ -372,6 +372,15 @@ class MMC(Parameterization, ABC) :
     @property
     def dimension(self) -> int : return self._dimension
 
+    def gen_x0(self) -> np.ndarray:
+        x0 = np.random.rand(self.n_components, self.dimension_per_mmc)
+        x0[:,self.representation.dimension-1] /= self.n_components
+        if (self.symmetry_x): 
+            x0[:,self.representation.dimension-1] /= 2
+        if (self.symmetry_y): 
+            x0[:,self.representation.dimension-1] /= 2
+        return x0
+
     def scale(self, x_configs: np.ndarray) -> np.ndarray :
         return x_configs*self.normalization_scale + self.normalization_shift
     
