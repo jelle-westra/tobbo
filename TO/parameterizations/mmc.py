@@ -379,7 +379,7 @@ class MMC(Parameterization, ABC) :
             x0[:,self.representation.dimension-1] /= 2
         if (self.symmetry_y): 
             x0[:,self.representation.dimension-1] /= 2
-        return x0
+        return x0.flatten()
 
     def scale(self, x_configs: np.ndarray) -> np.ndarray :
         return x_configs*self.normalization_scale + self.normalization_shift
