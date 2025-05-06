@@ -34,6 +34,7 @@ def run_experiment(
         cma.fmin2(problem, gen_x0, 0.25, restarts=3, bipop=True, options=opts)
     except KeyboardInterrupt:
         pass
+    print('[stop]')
 
 def _run_instance(seed: int, problem_constructor: Callable[[], ProblemInstance], budget: int, name: str):
     try:
@@ -41,7 +42,7 @@ def _run_instance(seed: int, problem_constructor: Callable[[], ProblemInstance],
         log_dir = f'./results/{name}/{seed}'
         os.makedirs(log_dir, exist_ok=True)
 
-        with open(os.path.join(log_dir, 'cma.log'), 'w') as fnull, redirect_stdout(fnull):
+        with open(os.path.join(log_dir, 'run.log'), 'w') as fnull, redirect_stdout(fnull):
             run_experiment(problem, budget, seed, name)
             return (seed, 'success')
 
