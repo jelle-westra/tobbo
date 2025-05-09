@@ -11,7 +11,7 @@ from TO.parameterizations.tiling import BinaryCells, HexGrid, unit_hexagon
 import numpy as np
 
 def construct_problem(n_cells_y: int, cell_size_ratio_xy: float, dimension: int) -> ProblemInstance :
-    topology = Topology(True, (100,50), 1.0)
+    topology = Topology(False, (100,50), 1.0)
     hex_cell_size_y = lambda n_cells_y : 2/np.sqrt(3)*(topology.domain_size_y/2)/(n_cells_y-1/2)
     parameterization = BinaryCells(
         topology,
