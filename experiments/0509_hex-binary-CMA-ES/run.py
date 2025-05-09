@@ -27,7 +27,7 @@ def construct_problem(n_cells_y: int, cell_size_ratio_xy: float, dimension: int)
     parameterization.cells = np.delete(parameterization.cells, [
         parameterization.dimension-2*(k+1)*(n_cells_y) for k in range(parameterization.dimension-dimension)
     ])
-    parameterization.dimension = dimension
+    parameterization._dimension = dimension
     return create_horizontal_cantilever_problem(topology, parameterization)
 
 def constructor_10D() : return construct_problem(n_cells_y=2, cell_size_ratio_xy=1.5, dimension=10)
