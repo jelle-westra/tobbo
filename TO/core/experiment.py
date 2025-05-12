@@ -67,7 +67,7 @@ def run_experiment_HEBO(problem: ProblemInstance, budget: int, seed: int, name: 
         rec = opt.suggest(n_suggestions=1)
         opt.observe(rec, np.apply_along_axis(problem, axis=1, arr=rec.values))
         if (opt.y.min() < y_best) or not(it%100):
-            print(f'{it:03d} [{problem.count}/{problem.budget}] {opt.y.min()}')
+            print(f'{it} [{problem.count}/{problem.budget}] {opt.y.min()}')
             if (opt.y.min() < y_best) : 
                 y_best = opt.y.min()
         it += 1
