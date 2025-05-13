@@ -72,8 +72,24 @@ def run_experiment_HEBO(problem: ProblemInstance, budget: int, seed: int, name: 
                 y_best = opt.y.min()
         it += 1
 
-def run_experiment_SMAC(problem: ProblemInstance, budget: int, seed: int, name: str) -> None :
-    raise NotImplementedError()
+def run_experiment_SMAC(problem: ProblemInstance, budget: int, seed: int, name: str):
+    from ConfigSpace import Configuration, ConfigurationSpace, Float
+    from smac import HyperparameterOptimizationFacade, Scenario
+
+    configspace = ConfigurationSpace([Float(f'x{i}', (0, 1), default=0) for i in range(problem.parameterization.dimension)])
+
+    def train(config: Configuration, seed: int = 0) -> float:
+        return problem(config.get_array())
+
+    # let's restrict the walltime to 12 hours and we allow for 1M trials as likely the simulation budget gets exhausted anyways
+    scenario = Scenario(configspace, deterministic=True, n_trials=1_000_000, walltime_limit=12*60*60, seed=seed)
+    intensifier = HyperparameterOptimizationFacade.get_intensifier(
+        scenario,
+        max_config_calls=1,  # We basically use one seed per config only
+    )
+
+    smac = HyperparameterOptimizationFacade(scenario, train, intensifier=intensifier)
+    incumbent = smac.optimize()
 
 def _run_instance(seed: int, problem_constructor: Callable[[], ProblemInstance], budget: int, name: str, method: OptimizationMethod):
     try:
