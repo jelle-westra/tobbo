@@ -59,8 +59,8 @@ class ProblemInstance:
             s  = f'{response:.6f}'
             for constraint in self.topology_constraints : s += f' {constraint.response:.6f}'
             handle.write(s + '\n')
+        return response
         
-
     def compute_constraint(self, constraint: Constraint, x: np.ndarray) :
         self.update(x) # updating the topology first if x has changed
         constraint.response = constraint.compute(self.topology)
