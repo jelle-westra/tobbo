@@ -55,9 +55,10 @@ class ProblemInstance:
         if not(response):
             response = self.evaluate(x)
         
-        s  = f'{response:.6f}'
-        for constraint in self.topology_constraints : s += f'{constraint.response:.6f}'
-        print(s)
+        with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
+            s  = f'{response:.6f}'
+            for constraint in self.topology_constraints : s += f' {constraint.response:.6f}'
+            handle.write(s + '\n')
         
 
     def compute_constraint(self, constraint: Constraint, x: np.ndarray) :
