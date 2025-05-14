@@ -46,10 +46,19 @@ class ProblemInstance:
 
     def __call__(self, x: np.ndarray):
         self.update(x)
+        response = 0.
         for constraint in self.topology_constraints:
             constraint.response = constraint.compute(self.topology)
-            if constraint.response : return constraint.response
-        return self.evaluate(x)
+            if constraint.response :
+                response = constraint.response
+                break
+        if not(response):
+            response = self.evaluate(x)
+        
+        s  = f'{response:.6f}'
+        for constraint in self.topology_constraints : s += f'{constraint.response:.6f}'
+        print(s)
+        
 
     def compute_constraint(self, constraint: Constraint, x: np.ndarray) :
         self.update(x) # updating the topology first if x has changed
@@ -66,13 +75,13 @@ class ProblemInstance:
         self.model.update(self.topology)
         self.score = self.objective(self.model)
         
-        if (self.score < self.score_best) or not(self.count%100): 
-            with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
+        # if (self.score < self.score_best) or not(self.count%100): 
+            # with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
                 # TODO : reintroduce the constraint values in the evals.txt just to be sure, just use constraint.response
-                handle.write(f'{self.count} {self.score} ')
-                handle.write(' '.join(map(str, x)) + '\n')
-            if (self.score < self.score_best) : 
-                (self.x_best, self.score_best) = (self.x.copy(), self.score)
+                # handle.write(f'{self.count} {self.score} ')
+                # handle.write(' '.join(map(str, x)) + '\n')
+            # if (self.score < self.score_best) : 
+                # (self.x_best, self.score_best) = (self.x.copy(), self.score)
         return abs(self.score)
     
     def plot_best(self, ax: Axes=None) :
