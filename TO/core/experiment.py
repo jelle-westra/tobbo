@@ -48,7 +48,7 @@ def run_experiment_CMAES(problem: ProblemInstance, budget: int, seed: int, name:
         return problem.parameterization.gen_x0()
 
     assert (seed != 0), 'If the seed is 0, cma will generate a seed by itself which will make the experiment not reproducible.'
-    opts: cma.CMAOptions = {'bounds': [0, 1], 'tolfun': 1e-6, 'seed': seed, 'verb_log': 0}
+    opts: cma.CMAOptions = {'bounds': [0, 1], 'tolfun': 1e-6, 'seed': seed, 'verb_filenameprefix': './results/{name}/outcmaes/'}
     cma.fmin2(problem, gen_x0, 0.25, restarts=3, bipop=True, options=opts)
 
 def run_experiment_HEBO(problem: ProblemInstance, budget: int, seed: int, name: str) -> None :
