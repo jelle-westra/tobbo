@@ -19,7 +19,8 @@ def create_horizontal_cantilever_problem(topology: Topology, parameterization: P
             max_relative_volume=0.5
         ),
         DisconnectionConstraint(
-            weight=1e4, 
+            weight=1e4,
+            topology=topology,
             boundaries=[
                 Point(topology.domain_size_x, topology.domain_size_y/2), # the loading point
                 LineString([(0,0), (0,topology.domain_size_y)]) # the wall

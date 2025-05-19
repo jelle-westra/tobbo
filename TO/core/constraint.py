@@ -1,5 +1,7 @@
 import numpy as np
 from shapely.geometry.base import BaseGeometry
+from shapely.geometry import MultiPolygon
+from shapely.affinity import scale
 from scipy.sparse.csgraph import minimum_spanning_tree
 
 from abc import ABC, abstractmethod
@@ -25,10 +27,23 @@ class VolumeConstraint(Constraint):
     
 @dataclass
 class DisconnectionConstraint(Constraint):
+    topology: Topology
     boundaries: List[BaseGeometry]
 
+    def __post_init__(self):
+        self.boundaries = [
+            scale(b, xfact=1/self.topology.domain_size_x, yfact=1/self.topology.domain_size_y, origin=(0,0)) 
+            for b in self.boundaries
+        ]
+        self.d_threshold = (1/2)*min(
+             1/(self.topology.density*self.topology.domain_size_x), 1/(self.topology.density*self.topology.domain_size_y)
+        )
+
     def compute(self, topology: Topology) -> float :
-        components = list(topology.geometry.geoms)
+        # operating in normalized space [0,1]^2
+        geo = scale(topology.geometry, xfact=1/topology.domain_size_x, yfact=1/topology.domain_size_y, origin=(0,0))
+        # checking shapely's dynamic typing
+        components = geo.geoms if isinstance(geo, MultiPolygon) else [geo]
 
         n = len(components)
         D = np.zeros((n,n))
@@ -40,14 +55,15 @@ class DisconnectionConstraint(Constraint):
                     D[i,j] = D[j,i] = d if (d > 1e-6) else -1
 
         D = minimum_spanning_tree(D).toarray()
-        # TODO : reimplement desnity-based thresholding
-        D[D < 1/2] = 0
+        D[D < self.d_threshold] = 0
         d = D.sum()
 
         for boundary in self.boundaries :
-            if (distance_to_boundary := topology.geometry.distance(boundary)) > 1/2 : 
-                d += distance_to_boundary
-        return d
+            d_to_boundary = geo.distance(boundary)
+            if (d_to_boundary > self.d_threshold):
+                d += d_to_boundary
+        # normalization, the largest distance in [0,1]^2 is sqrt(2)
+        return d/np.sqrt(2)
     
 @dataclass
 class ConstraintMix(Constraint):
