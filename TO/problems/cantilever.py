@@ -15,11 +15,11 @@ def create_horizontal_cantilever_problem(topology: Topology, parameterization: P
     )
     topology_constraints = [
         VolumeConstraint(
-            weight=1e4, 
+            weight=1e3, 
             max_relative_volume=0.5
         ),
         DisconnectionConstraint(
-            weight=1e4,
+            weight=1e3,
             topology=topology,
             boundaries=[
                 Point(topology.domain_size_x, topology.domain_size_y/2), # the loading point
@@ -27,6 +27,6 @@ def create_horizontal_cantilever_problem(topology: Topology, parameterization: P
             ]
         )
     ]
-    constraint_mixer = ConstraintMix(1, topology_constraints)
+    constraint_mixer = ConstraintMix(1, topology_constraints, offset=500)
     objective = lambda model : model.compute_element_compliance().sum()
     return ProblemInstance(topology, parameterization, model, [constraint_mixer], objective)

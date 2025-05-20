@@ -99,6 +99,8 @@ class DisconnectionConstraint(Constraint):
 @dataclass
 class ConstraintMix(Constraint):
     constraints: List[Constraint]
+    offset: float
 
     def compute(self, topology: Topology): 
-        return sum(c.weight*c.compute(topology) for c in self.constraints)
+        g = sum(c.weight*c.compute(topology) for c in self.constraints)
+        return self.offset + g if (g > 0) else 0.
