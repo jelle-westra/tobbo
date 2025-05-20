@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
 import os
-from time import time
+from datetime import datetime
 from typing import List
 
 from .constraint import Constraint
@@ -31,7 +31,6 @@ class ProblemInstance:
         self.score = self.score_best = float('inf')
         # JELLE DEBUG
         self.count: int = 0
-        self.start_time = time()
         self.budget = float('inf')
 
     def set_budget(self, budget) : 
@@ -68,6 +67,8 @@ class ProblemInstance:
         
         if (self.score < self.score_best) or not(self.count%100): 
             with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
+                if not(self.count%100) :
+                    handle.write(f'# [{self.count}/{self.budget}] ' + str(datetime.now()))
                 # TODO : reintroduce the constraint values in the evals.txt just to be sure, just use constraint.response
                 handle.write(f'{self.count} {self.score} ')
                 handle.write(' '.join(map(str, x)) + '\n')
