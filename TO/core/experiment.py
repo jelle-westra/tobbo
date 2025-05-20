@@ -45,7 +45,7 @@ def run_experiment_CMAES(problem: ProblemInstance, budget: int, seed: int, name:
         nonlocal seed, problem
         np.random.seed(seed)
         seed += 1000
-        return problem.parameterization.gen_x0()
+        return np.random.rand(problem.parameterization.dimension)
 
     assert (seed != 0), 'If the seed is 0, cma will generate a seed by itself which will make the experiment not reproducible.'
     opts: cma.CMAOptions = {'bounds': [0, 1], 'tolfun': 1e-6, 'seed': seed, 'verb_log': 0}
@@ -82,7 +82,13 @@ def run_experiment_SMAC(problem: ProblemInstance, budget: int, seed: int, name: 
         return problem(config.get_array())
 
     # let's restrict the walltime to 12 hours and we allow for 1M trials as likely the simulation budget gets exhausted anyways
-    scenario = Scenario(configspace, deterministic=True, n_trials=1_000_000, walltime_limit=12*60*60, seed=seed)
+    scenario = Scenario(
+        configspace, 
+        deterministic=True, 
+        n_trials=1_000_000, 
+        walltime_limit=12*60*60, seed=seed,
+        output_directory=f'results/{name}/{seed}'
+    )
     intensifier = HyperparameterOptimizationFacade.get_intensifier(
         scenario,
         max_config_calls=1,  # We basically use one seed per config only
