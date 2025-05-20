@@ -28,8 +28,8 @@ def run_experiment(
         OptimizationMethod.HEBO: run_experiment_HEBO,
         OptimizationMethod.SMAC: run_experiment_SMAC,
     }
-    problem.set_budget(budget)
     problem.logger_output_directory = f'./results/{name}/{seed}'
+    problem.set_budget(budget)
     os.makedirs(problem.logger_output_directory, exist_ok=True)
 
     try:
