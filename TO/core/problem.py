@@ -36,6 +36,7 @@ class ProblemInstance:
     def set_budget(self, budget) : 
         self.budget = budget
         with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
+            handle.write(f'# total_evaluations, simulation_calls, fitness, configuration\n')
             handle.write(f'# [{self.simulation_calls}/{self.budget}] ' + str(datetime.now()) + '\n')
 
     def update(self, x:np.ndarray) -> None :

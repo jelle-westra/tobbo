@@ -29,8 +29,8 @@ def run_experiment(
         OptimizationMethod.SMAC: run_experiment_SMAC,
     }
     problem.logger_output_directory = f'./results/{name}/{seed}'
-    problem.set_budget(budget)
     os.makedirs(problem.logger_output_directory, exist_ok=True)
+    problem.set_budget(budget)
 
     try:
         run_experiment_funcs[method](problem, budget, seed, name)
@@ -75,6 +75,7 @@ def run_experiment_HEBO(problem: ProblemInstance, budget: int, seed: int, name: 
 def run_experiment_SMAC(problem: ProblemInstance, budget: int, seed: int, name: str):
     from ConfigSpace import Configuration, ConfigurationSpace, Float
     from smac import HyperparameterOptimizationFacade, Scenario
+    from smac.runhistory.dataclasses import TrialValue
 
     configspace = ConfigurationSpace([Float(f'x{i}', (0, 1), default=0) for i in range(problem.parameterization.dimension)])
 
@@ -87,15 +88,26 @@ def run_experiment_SMAC(problem: ProblemInstance, budget: int, seed: int, name: 
         deterministic=True, 
         n_trials=1_000_000, 
         walltime_limit=12*60*60, seed=seed,
-        output_directory=f'results/{name}/{seed}'
+        output_directory=f'results/{name}/{seed}',
+        n_workers=10
     )
     intensifier = HyperparameterOptimizationFacade.get_intensifier(
         scenario,
         max_config_calls=1,  # We basically use one seed per config only
     )
+    # TODO : maybe change the random design? 20% is default, it does not seem to affect perfromance too much
+    random_design = HyperparameterOptimizationFacade.get_random_design(
+        scenario, 
+        probability=0.2
+    )
+    smac = HyperparameterOptimizationFacade(scenario, train, intensifier=intensifier, random_design=random_design)
 
-    smac = HyperparameterOptimizationFacade(scenario, train, intensifier=intensifier)
-    incumbent = smac.optimize()
+    while (problem.budget > problem.simulation_calls) :
+        # TODO : number of samples depending on dimension? CMAES does change this based on the dimension
+        trials = [smac.ask() for _ in range(20)]
+        for trial in trials:
+            val = train(trial.config)
+            smac.tell(trial, TrialValue(val))
 
 def _run_instance(seed: int, problem_constructor: Callable[[], ProblemInstance], budget: int, name: str, method: OptimizationMethod):
     try:
