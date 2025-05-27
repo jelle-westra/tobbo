@@ -57,7 +57,7 @@ class Voronoi(Parameterization):
         x_pts = x.reshape(self.n_points, 2)
         mesh = spatial.Voronoi(x_pts)
         segments = get_voronoi_line_segments(mesh)
-        return unary_union([self.mmc.compute_geometry(np.r_[segment.flatten(), 0.08]) for segment in segments])
+        return unary_union([self.mmc.compute_geometry(np.r_[segment.flatten(), 1.]) for segment in segments])
 
 @dataclass
 class Delaunay(Parameterization):
@@ -70,7 +70,7 @@ class Delaunay(Parameterization):
     def __post_init__(self) :
         self.mmc = self.mmc_cls(self.topology, False, False, 1, MMCCenterpointsConfig, StraightBeam, 100)
         self.max_n_edges = 3*self.n_points - 6
-        self.dimension = 2*self.n_points + self.max_n_edges
+        self._dimension = 2*self.n_points + self.max_n_edges
 
     @property
     def dimension(self) -> int : return self._dimension
