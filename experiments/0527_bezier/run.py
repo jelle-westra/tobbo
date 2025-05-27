@@ -11,7 +11,7 @@ from TO.problems.cantilever import create_horizontal_cantilever_problem
 def constructor_normalization_scale(n_components: int) -> ProblemInstance:
     topology = Topology(False, (100, 50), 1.)
     deformer = MMCDeformerPipeline([LinearHeightInterpolation(1000), CubicBezierDeformer(1000)])
-    parameterization = Capsules(topology, False, False, 1, MMCCenterpointsConfig, deformer, 1000)
+    parameterization = Capsules(topology, False, True, n_components, MMCCenterpointsConfig, deformer, 1000)
 
     rxmin = topology.domain_size_x/parameterization.n_components/(2 if parameterization.symmetry_x else 1)/2
     rymin = topology.domain_size_y/parameterization.n_components/(2 if parameterization.symmetry_y else 1)/2
