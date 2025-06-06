@@ -328,10 +328,10 @@ class MMCDeformerPipeline(MMCDeformer):
         self.dimension = sum(d.dimension for d in self.deformers)
 
     def get_normalization_scale(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
-        return np.r_[*[d.get_normalization_scale(topology, symmetry_x, symmetry_y) for d in self.deformers]]
+        return np.r_[tuple(d.get_normalization_scale(topology, symmetry_x, symmetry_y) for d in self.deformers)]
     
     def get_normalization_shift(self, topology: Topology, symmetry_x: bool, symmetry_y: bool) -> np.ndarray:
-        return np.r_[*[d.get_normalization_shift(topology, symmetry_x, symmetry_y) for d in self.deformers]]
+        return np.r_[tuple(d.get_normalization_shift(topology, symmetry_x, symmetry_y) for d in self.deformers)]
     
     def deform_pre_scale_x(self, geo: Polygon, config: MMCAngularConfig, x_scaled: np.ndarray) -> Polygon :
         i = 0
