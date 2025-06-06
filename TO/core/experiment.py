@@ -60,14 +60,14 @@ def run_experiment_HEBO(problem: ProblemInstance, budget: int, seed: int, name: 
     dimension_specs = [{'name': str(i+1), 'type': 'num', 'lb' : 0, 'ub' : 1 } for i in range(problem.parameterization.dimension)]
     space = DesignSpace().parse(dimension_specs)
     opt = HEBO(space, scramble_seed=seed)
-
+    
     it = 0
     y_best = float('inf')
-    while (problem.budget-problem.count > 0):
+    while (problem.simulation_calls < problem.budget):
         rec = opt.suggest(n_suggestions=1)
         opt.observe(rec, np.apply_along_axis(problem, axis=1, arr=rec.values))
         if (opt.y.min() < y_best) or not(it%100):
-            print(f'{it} [{problem.count}/{problem.budget}] {opt.y.min()}')
+            print(f'{it} [{problem.simulation_calls}/{problem.budget}] {opt.y.min()}')
             if (opt.y.min() < y_best) : 
                 y_best = opt.y.min()
         it += 1
