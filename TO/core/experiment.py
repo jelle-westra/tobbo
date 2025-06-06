@@ -15,6 +15,7 @@ class OptimizationMethod(Enum):
     CMAES = 1
     HEBO = 2
     SMAC = 3
+    DE = 4
 
 def run_experiment(
     problem: ProblemInstance,
@@ -27,6 +28,7 @@ def run_experiment(
         OptimizationMethod.CMAES: run_experiment_CMAES,
         OptimizationMethod.HEBO: run_experiment_HEBO,
         OptimizationMethod.SMAC: run_experiment_SMAC,
+        OptimizationMethod.DE: run_experiment_DE,
     }
     problem.logger_output_directory = f'./results/{name}/{seed}'
     os.makedirs(problem.logger_output_directory, exist_ok=True)
@@ -37,6 +39,10 @@ def run_experiment(
     except KeyboardInterrupt:
         pass
     print('[stop]')
+
+def run_experiment_DE(problem: ProblemInstance, budget: int, seed: int, name: str):
+    from scipy.optimize import differential_evolution
+    differential_evolution(problem, bounds=[(0,1)]*problem.parameterization.dimension, maxiter=1_000_000, seed=seed)
     
 def run_experiment_CMAES(problem: ProblemInstance, budget: int, seed: int, name: str):
     import cma
