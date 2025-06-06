@@ -50,9 +50,10 @@ class MMCAngularConfig(MMCConfig):
             topology.domain_size_x, topology.domain_size_y, # (x,y)
             np.pi, float('nan'), float('nan') # (theta, rx, ry)
         ])
-        normalization_scale[[3,4]] = np.hypot(topology.domain_size_x, topology.domain_size_y)/2/n_components
-        if (symmetry_x) : normalization_scale[[0,3,4]] /= 2.
-        if (symmetry_y) : normalization_scale[[1,3,4]] /= 2.
+        normalization_scale[[3,4]] = np.hypot(topology.domain_size_x, topology.domain_size_y)/2
+        normalization_scale[4] /= n_components
+        if (symmetry_x) : normalization_scale[[0,4]] /= 2.
+        if (symmetry_y) : normalization_scale[[1,4]] /= 2.
         return normalization_scale
     
     def to_angular(self) -> 'MMCAngularConfig' : return self
