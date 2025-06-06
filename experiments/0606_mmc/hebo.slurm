@@ -32,4 +32,4 @@ seed=$(awk -v ArrayTaskID=$SLURM_ARRAY_TASK_ID '$1==ArrayTaskID {print $4}' $con
 
 echo "Running topology optimization with property: $PROPERTY"
 # Replace the following line with your actual command
-python3 $HOME/TO/experiments/0606_mmc/run.py --dimension dimension --optimizer optimizer --seed seed
+python3 $HOME/TO/experiments/0606_mmc/run.py --dimension $dimension --optimizer $optimizer --seed $seed
