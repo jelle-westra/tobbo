@@ -16,7 +16,7 @@ def constructor_normalization_scale(n_components: int) -> ProblemInstance:
 
     rxmin = topology.domain_size_x/parameterization.n_components/(2 if parameterization.symmetry_x else 1)/2
     rymin = topology.domain_size_y/parameterization.n_components/(2 if parameterization.symmetry_y else 1)/2
-    parameterization.normalization_scale[-1] = min(rxmin, rymin)
+    parameterization.normalization_scale[4] = min(rxmin, rymin)
 
     return create_horizontal_cantilever_problem(topology, parameterization)
 
