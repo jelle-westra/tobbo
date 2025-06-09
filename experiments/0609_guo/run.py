@@ -55,6 +55,6 @@ if (__name__ == '__main__'):
     budget = lambda parameterization : 100*(parameterization.dimension)
     problem: ProblemInstance = experiments[args.dimension]()
 
-    name = f'{args.dimension}D_mmc_{args.optimizer}'
+    name = f'{args.dimension}D_guo_{args.optimizer}'
 
     run_experiment(problem, budget(problem.parameterization), args.seed, name, method)
