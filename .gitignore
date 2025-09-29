@@ -1,13 +1,11 @@
+.venv/
+
+package/build
+package/tobbo/*/_*.c
+package/tobbo/*/_*.so
+package/tobbo.egg-info
+
 *__pycache__/
 *.DS_STORE
-results*/
-*.pkl
-*.version
-*.out
 
-/notepad.ipynb
-
-TO/build
-TO/models/*.c
-TO/models/*.so
-TO/models/*.pyd
+TODO.md
