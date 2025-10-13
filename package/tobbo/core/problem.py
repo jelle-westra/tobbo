@@ -32,6 +32,7 @@ class ProblemInstance:
         self.evaluations: int = 0
         self.simulation_calls: int = 0
         self.budget = float('inf')
+        self.log = {'total_evaluations': [], 'simulations': [], 'fitness': [], 'configuration': []}
 
     def set_budget(self, budget) : 
         self.budget = budget
@@ -46,13 +47,42 @@ class ProblemInstance:
             self.score = float('nan')
             self.x = x
 
-    def __call__(self, x: np.ndarray):
+    def log_call(self) -> None :
+        improved_log = (self.score < self.score_best)
+        intermediate_log = not(self.simulation_calls%100) and self.simulation_calls > 0
+
+
+        if improved_log or intermediate_log: 
+            with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
+                if (intermediate_log) :
+                    handle.write(f'# [{self.simulation_calls}/{self.budget}] ' + str(datetime.now()) + '\n')
+
+                handle.write(f'{self.evaluations} {self.simulation_calls} {self.score} ')
+                handle.write(' '.join(map(str, self.x)) + '\n')
+
+                for (k, v) in zip(self.log.keys(), (self.evaluations, self.simulation_calls, self.score, self.x)):
+                    self.log[k].append(v)
+
+    def __call__(self, x: np.ndarray) -> float:
         self.evaluations += 1
         self.update(x)
+
+        feasible = True
         for constraint in self.topology_constraints:
             constraint.response = constraint.compute(self.topology)
-            if constraint.response : return constraint.response
-        return self.evaluate(x)
+            if constraint.response : 
+                self.score = constraint.response
+                feasible = False; break
+        # checking if objective still is 0., i.e. constraints are 0.
+        if (feasible):
+            self.score = self.evaluate(x)
+
+        self.log_call()
+
+        if (self.score < self.score_best) : 
+            (self.x_best, self.score_best) = (self.x.copy(), self.score)
+
+        return self.score
 
     def compute_constraint(self, constraint: Constraint, x: np.ndarray) :
         self.update(x) # updating the topology first if x has changed
@@ -68,16 +98,8 @@ class ProblemInstance:
         self.model.update(self.topology)
         self.score = self.objective(self.model)
         
-        if (self.score < self.score_best) or not(self.simulation_calls%100): 
-            with open(os.path.join(self.logger_output_directory, 'evals.dat'), 'a') as handle :
-                if not(self.simulation_calls%100) :
-                    handle.write(f'# [{self.simulation_calls}/{self.budget}] ' + str(datetime.now()) + '\n')
-                # TODO : reintroduce the constraint values in the evals.txt just to be sure, just use constraint.response
-                handle.write(f'{self.evaluations} {self.simulation_calls} {self.score} ')
-                handle.write(' '.join(map(str, x)) + '\n')
-            if (self.score < self.score_best) : 
-                (self.x_best, self.score_best) = (self.x.copy(), self.score)
-        return abs(self.score)
+        
+        return self.score
     
     def plot_best(self, ax: Axes=None) :
         if (ax is None) : ax = plt.gca()
@@ -86,3 +108,16 @@ class ProblemInstance:
         for c in self.topology_constraints:
             if hasattr(c, 'boundaries'):
                 for b in c.boundaries : ax.plot(*b.xy, 'ko--', lw=2)
+
+    def plot_log(self, ax: Axes=None, inset_bounds=[0.4,0.4,0.5,0.5]):
+        if (ax is None) : ax = plt.gca()
+        simulations = np.arange(1,self.budget+1)
+        best_fitness = np.inf*np.ones(self.budget, dtype=float)
+
+        best_fitness[[i-1 for i in self.log['simulations']]] = self.log['fitness']
+        best_fitness = np.minimum.accumulate(best_fitness)
+
+        if (inset_bounds) : self.plot_best(ax.inset_axes(inset_bounds))
+
+        ax.semilogy(simulations, best_fitness)
+        ax.set_xlabel('Simulation Calls'); ax.set_ylabel('Compliance')

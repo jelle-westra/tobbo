@@ -1,11 +1,12 @@
 .venv/
-
 package/build
 package/tobbo/*/_*.c
 package/tobbo/*/_*.so
 package/tobbo.egg-info
+results/
 
 *__pycache__/
 *.DS_STORE
 
-TODO.md
+__*.ipynb
+__*.md

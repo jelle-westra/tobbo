@@ -16,7 +16,7 @@ class OptimizationMethod(Enum):
     HEBO = 2
     SMAC = 3
     DE = 4
-
+    
 def run_experiment(
     problem: ProblemInstance,
     budget: int,

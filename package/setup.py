@@ -2,19 +2,21 @@ from setuptools import setup, find_packages, Extension
 from Cython.Build import cythonize
 import numpy as np
 
-with open('README.md', 'r') as handle : long_description = handle.read()
+def read_readme() -> str:
+    with open('README.md', 'r') as handle : 
+        long_description = handle.read()
+    return long_description
 
-# build : ~ python setup.py build_ext --inplace
 setup(
     name='tobbo',
     version = '0.1.0',
     description='Topology Optimization with Black-Box Optimization methods',
     packages=find_packages(where='.'),
     package_dir={'tobbo': 'tobbo'},
-    long_description=long_description,
+    long_description=read_readme(),
     long_description_content_type='text/markdown',
     url='https://github.com/jelle-westra/tobbo',
-    author='jelle-westra',
+    author='jelle-westra, olarterodriguezivan, elenaraponi',
     author_email='jelwestra@gmail.com',
     license='MIT',
     classifiers=[
@@ -38,7 +40,7 @@ setup(
         'GPy>=1.13.2',
     ],
     ext_modules=cythonize(
-        Extension('models._membrane_cython', ['tobbo/models/_membrane_cython.pyx']),
+        Extension('tobbo.models._membrane_cython', ['tobbo/models/_membrane_cython.pyx']),
         language_level='3',
     ),
     include_dirs=[np.get_include()] 
