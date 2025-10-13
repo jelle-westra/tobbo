@@ -61,72 +61,47 @@ After review the package will be added to pypi, for now
 pip install ./package/
 ```
 
-### Getting Started
+## Minimal Example
+An explainer for this minimal example alongside more examples can be found in `tutorial.ipynb`
 
-Tutorial can be found tutorial.ipynb
-
-Minimal Example:
-```[language=python]
+```
 from tobbo.core import Topology, OptimizationMethod, run_experiment
 from tobbo.parameterizations.mmc import Capsules, MMCEndpointsConfig
 from tobbo.problems.cantilever import create_horizontal_cantilever_problem
-```
 
-Setting up a TO experiment with tobbo is four-fold:
-
-1) **Domain** definition; setting up the Topology container.
-2) **Parameterization** definition; a mapping for generating geometry from design vectors.
-3) **Problem** definition; physics model, constraints, objective.
-3) **Optimization**; using a BBO method for minimizing the objective.
-
-
-#### Problem Domain 
-Topology is used as data container for domain configuration, and holding the geometry in polygonal- and discretized binary mask form. This binary mask is used to activate material in the mesh of the physics model. The polygonal representation is used for calculation of the constraint functions. 
-```
-topology: Topology = Topology(
-    continuous=False,
-    domain_size=(100, 50),
-    density=1.
+topology = Topology(
+    continuous=False,       # using the rasterized (discrete) geometry for constraints
+    domain_size=(100, 50),  # domain size (100x50)
+    density=1.              # cell size per unit length; mesh size (100x50) in this case
 )
-```
-We use the rasterized polygonal geometry for calculating constraint (`continuous=False`), such that it is one-to-one with the physics mesh. Sometimes the underlying continuous geometry can be barely connected, whereas after rasterization this is not the case, this results to spurious calls to the physics simulation.
-
-#### Parameterization
-A Parameterization generates the geometry based on the parameterized design vector.
-```
 parameterization = Capsules(
-    topology,
-    symmetry_x=False,
-    symmetry_y=True,
+    topology,               # used to initialize normalization factors
+    symmetry_x=False,       # mirror in x-direction
+    symmetry_y=True,        # mirror in y-direction
     representation=MMCEndpointsConfig, 
-    n_components=1,
-    deformer=None,
-    n_samples=1000
+    n_components=1,         # before mirroring
+    deformer=None,          # straight beam
+    n_samples=1000          # no. vertices of polygon prior to rasterization to mesh
 )
-```
-We generate a single capsule-shaped beam (`n_components=1`), mirror it among the horizontal centerline of the domain (`symmetry_y=True`), represented by two endpoints and a thickness (`MMCEndPointsConfig`, 5dof). 
 
-![parameterization-rasterization](package/assets/rasterization.svg)
-
-> **NOTE** Contrary, the (`MMCAngularConfig`, 5dof) representation uses a centerpoint, width, thickness, and angle. These differences in representation reflect in completely different fitness landscapes, although both can produce exactly idential geometries. 
->
-> This interplay between problem formulation (parameterization) and effect on optimization procedures is exactly where our focus lies.
-
-#### Problem
-```
-# the horizontal cantilever loading problem
 problem = create_horizontal_cantilever_problem(topology, parameterization)
-```
-#### Optimization
 
+run_experiment(problem, budget=100, seed=1, name='minimal-example', method=OptimizationMethod.CMAES)
+problem.plot_log()
 ```
-run_experiment(problem, 
-    budget=100, 
-    seed=1, 
-    name='minimal-example', 
-    method=OptimizationMethod.CMAES
-)
+Outputs
 ```
+(4_w,8)-aCMA-ES (mu_w=2.6,w_1=52%) in dimension 5 (seed=1, Mon Oct 13 09:44:41 2025)
+Iterat #Fevals   function value  axis ratio  sigma  min&max std  t[m:s]
+    1      8 6.697056274847714e+02 1.0e+00 2.51e-01  2e-01  3e-01 0:00.1
+    2     16 2.043857152229669e+00 1.3e+00 2.92e-01  3e-01  3e-01 0:00.3
+    3     24 5.608504366272913e+02 1.5e+00 2.92e-01  2e-01  3e-01 0:00.3
+   22    176 5.092354039324587e-01 2.9e+00 4.35e-02  2e-02  4e-02 0:03.6
+   27    216 2.205799576087525e-01 3.7e+00 4.16e-02  2e-02  5e-02 0:08.7
+   32    256 1.049632949995606e-01 4.3e+00 6.09e-02  2e-02  7e-02 0:14.0
+[stop]
+```
+![minimal-example](./package/assets/minimal-example.svg)
 
 ### `tobbo` Package Structure
 

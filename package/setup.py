@@ -16,8 +16,8 @@ setup(
     long_description=read_readme(),
     long_description_content_type='text/markdown',
     url='https://github.com/jelle-westra/tobbo',
-    author='jelle-westra, olarterodriguezivan, elenaraponi',
-    author_email='jelwestra@gmail.com',
+    author='_______, _____________, _________',
+    author_email='________@gmail.com',
     license='MIT',
     classifiers=[
         'Intended Audience :: Science/Research',
