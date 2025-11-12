@@ -15,7 +15,7 @@ setup(
     package_dir={'tobbo': 'tobbo'},
     long_description=read_readme(),
     long_description_content_type='text/markdown',
-    url='https://github.com/jelle-westra/tobbo',
+    url='https://github.com/_________/tobbo',
     author='_______, _____________, _________',
     author_email='________@gmail.com',
     license='MIT',
