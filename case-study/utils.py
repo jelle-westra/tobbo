@@ -6,6 +6,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
+from matplotlib import gridspec
+from constructors import mmc_constructors, curved_mmc_constructors, honeycomb_constructors
+
 def set_plt_template() -> None:
     plt.rcParams['axes.spines.top'] = False
     plt.rcParams['axes.spines.right'] = False
@@ -196,3 +199,73 @@ def plot_convergence_per_total(
 
     fig.tight_layout()
     return (fig, ax)
+
+def plot_final_distributions(
+    dim: int,
+    optimizers: List[str],
+    parameterizations: List[str],
+    runs: dict,
+):
+    linewidth = 4.79167 # [inch]
+    # fig, ax = plt.subplots(1, 2, figsize=(10,8), width_ratios=[3,1])
+
+    fig = plt.figure(figsize=(10/2,8))
+    gs = gridspec.GridSpec(9, 2, width_ratios=[3, 1])
+    ax0 = plt.subplot(gs[:,0])
+
+    ax1 = [plt.subplot(gs[i,1]) for i in range(9)]
+
+    i = 0
+    for parameterization in parameterizations:
+        for optimizer in optimizers:
+            bplot = ax0.boxplot(runs[dim][optimizer][parameterization]['min'], positions=[8-i], vert=False, patch_artist=True)
+            bplot['boxes'][0].set_facecolor('w')
+            i += 1
+
+    ax0.boxplot([], patch_artist=True, label='Sub 0.1\nMedian Compliance')['boxes'][0].set_facecolor('#d5e2ef')
+
+    ax0.axhline(2.5, c='k', lw=0.8)
+    ax0.axhline(5.5, c='k', lw=0.8)
+
+    ax0.set_xscale('log')
+    ax0.set_xticks([.1, .2, .5, 1, 2], [.1, .2, .5, 1, 2])
+    ax0.grid(True, axis='x', which='major', alpha=.2)
+
+
+    ax0.set_yticks(range(len(3*optimizers)), 3*optimizers[::-1], size=12, rotation=90, va='center')
+    fig.suptitle(f'{dim}D Final Compliance Distributions \n(15 runs, {20*dim} simulations)', size=18)
+
+
+    fmin = []
+    constructor = mmc_constructors[dim]()
+    for (i, optimizer) in enumerate(optimizers):
+        fmin.append(runs[dim][optimizer]['mmc']['min'].min())
+        x = runs[dim][optimizer]['mmc']['best_configs'][runs[dim][optimizer]['mmc']['min'].argmin()]
+        constructor.parameterization.update_topology(constructor.topology, x)
+        constructor.topology.plot(ax1[i])
+        ax1[i].axis('off')
+
+    constructor = curved_mmc_constructors[dim]()
+    for (i, optimizer) in enumerate(optimizers):
+        fmin.append(runs[dim][optimizer]['guo']['min'].min())
+        x = runs[dim][optimizer]['guo']['best_configs'][runs[dim][optimizer]['guo']['min'].argmin()]
+        constructor.parameterization.update_topology(constructor.topology, x)
+        constructor.topology.plot(ax1[3+i])
+        ax1[3+i].axis('off')
+
+    constructor = honeycomb_constructors[dim]()
+    for (i, optimizer) in enumerate(optimizers):
+        fmin.append(runs[dim][optimizer]['hex']['min'].min())
+        x = runs[dim][optimizer]['hex']['best_configs'][runs[dim][optimizer]['hex']['min'].argmin()]
+        constructor.parameterization.update_topology(constructor.topology, x)
+        constructor.topology.plot(ax1[6+i])
+        ax1[6+i].axis('off')
+
+    ax0.set_xlabel('Final Compliance')
+
+    fig.tight_layout()
+
+    for (i, f) in enumerate(fmin):
+        ax1[i].text(50, 50, f'{f:.4f}', size=10, ha='center', va='bottom')
+
+    return (fig, ax0, ax1)
