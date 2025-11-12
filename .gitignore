@@ -5,6 +5,7 @@ package/tobbo/*/_*.so
 package/tobbo.egg-info
 
 analysis/figures/*
+results/*
 
 *__pycache__/
 *.DS_STORE
