@@ -61,7 +61,7 @@ After review the package will be added to pypi, for now
 pip install ./package/
 ```
 
-## Minimal Example
+### Minimal Example
 An explainer for this minimal example alongside more examples can be found in `tutorial.ipynb`
 
 ```
@@ -115,7 +115,7 @@ Iterat #Fevals   function value  axis ratio  sigma  min&max std  t[m:s]
 ```
 
 
-## Authors
+## Team
 After review the authors will be added.
 
 ...
